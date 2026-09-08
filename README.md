@@ -9,6 +9,11 @@ firmware from `buddies_public`.
 - Workshop Computer source and directive: `/Users/adrianvos/coding/GitHub/Workshop_Computer`
 - Preferred Workshop target: `ComputerCard` firmware at 48 kHz
 
+## Cards
+
+- `cards/buzzrito`: active first-pass Workshop Computer firmware scaffold
+- `cards/bib`: staged notes for the next port
+
 ## Porting Notes
 
 The original Bib and Buzzrito firmware runs on RP2040 at 200 MHz with 48 kHz
