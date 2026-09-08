@@ -12,7 +12,9 @@
 - Main: overall tune
 - X: virtual XY pad X
 - Y: virtual XY pad Y
-- CV1: pitch modulation, roughly 3 mV per signed ADC count
+- Audio/CV In 1: pitch modulation, roughly 3 mV per signed ADC count
+- CV1: virtual XY pad X modulation
+- CV2: virtual XY pad Y modulation
 - Pulse1: gate input; unpatched means drone
 - Audio Out 1/2: stereo output
 - CV Out 1: pitch CV monitor
@@ -52,20 +54,35 @@ Expected behavior:
 - No hard lockups, sudden silence, or harsh digital clipping during knob travel.
 - LED pairs should move in opposite brightness patterns as X and Y cross center.
 
-## Gate And CV
+## Gate And Pitch CV
 
 1. Patch a slow gate or square LFO into Pulse1.
 2. Confirm audio opens and closes with the gate.
 3. Confirm Pulse Out 1 follows the gated state.
-4. Patch a slow bipolar CV into CV1.
-5. Sweep Main while CV1 is patched.
+4. Patch a slow bipolar CV into Audio/CV In 1.
+5. Sweep Main while Audio/CV In 1 is patched.
 
 Expected behavior:
 
 - Pulse1 gates the output with a short smoothing transition.
 - With Pulse1 unplugged, the firmware returns to drone behavior.
-- CV1 shifts pitch around the Main tune setting.
+- Audio/CV In 1 shifts pitch around the Main tune setting.
 - CV Out 1 follows the approximate pitch control and stays within the Workshop Computer output range.
+
+## X/Y CV Modulation
+
+1. Set X and Y near noon.
+2. Patch a slow bipolar CV or LFO into CV1.
+3. Confirm CV1 moves the same sound region as the X knob.
+4. Patch a different slow bipolar CV or LFO into CV2.
+5. Confirm CV2 moves the same sound region as the Y knob.
+6. Try X/Y knob sweeps while CV1/CV2 remain patched.
+
+Expected behavior:
+
+- CV1 offsets the virtual pad X position.
+- CV2 offsets the virtual pad Y position.
+- X/Y modulation remains bounded at the pad edges rather than wrapping or locking up.
 
 ## Audio Quality Checks
 
@@ -85,6 +102,8 @@ Pass criteria:
 
 - Does Main's range feel too wide, too narrow, or reversed?
 - Are X and Y intuitive compared with the original XY pad?
+- Does Audio/CV In 1 pitch scaling feel right?
+- Do CV1 and CV2 feel like faithful X/Y pad modulation inputs?
 - Does Pulse1 gating feel useful, or should it become a mode/chord trigger?
 - Are the LED behaviors helpful enough for a card without artwork?
 - Any control ranges that should be curved, limited, or swapped before the next UF2.

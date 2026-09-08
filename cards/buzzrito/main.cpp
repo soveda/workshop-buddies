@@ -27,15 +27,26 @@ public:
         // Main is an overall tune control. The Buddies oscillator expects a
         // pitch value in millivolts, so this gives about five octaves of sweep.
         int32_t pitch_mv = -2000 + ((main * 5000) >> 12);
-        if (Connected(Input::CV1))
+        if (Connected(Input::Audio1))
         {
-            // ComputerCard CV inputs are signed 12-bit over roughly +/-6 V.
-            pitch_mv += CVIn1() * 3;
+            // Audio/CV In 1 is signed 12-bit and serves as Buzzrito pitch CV.
+            pitch_mv += AudioIn1() * 3;
         }
 
-        // X and Y replace the original capacitive XY pad.
-        const int32_t pad_x = ((x - 2048) * 4096) >> 11;
-        const int32_t pad_y = ((y - 2048) * 4096) >> 11;
+        // X/Y knobs replace the original capacitive XY pad, with CV1/CV2
+        // acting as the original Buzzrito X/Y CV inputs.
+        int32_t pad_x = ((x - 2048) * 4096) >> 11;
+        int32_t pad_y = ((y - 2048) * 4096) >> 11;
+        if (Connected(Input::CV1))
+        {
+            pad_x += CVIn1() * 2;
+        }
+        if (Connected(Input::CV2))
+        {
+            pad_y += CVIn2() * 2;
+        }
+        pad_x = clampi(pad_x, -4096, 4095);
+        pad_y = clampi(pad_y, -4096, 4095);
 
         int32_t gate_q16 = 65535;
         if (Connected(Input::Pulse1))
@@ -98,4 +109,3 @@ int main()
     card.EnableNormalisationProbe();
     card.Run();
 }
-

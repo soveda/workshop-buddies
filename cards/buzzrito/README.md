@@ -7,7 +7,9 @@ First-pass Workshop Computer port of the Buddies Buzzrito swarm oscillator.
 - Main: overall tune / pitch offset
 - X: virtual XY pad X
 - Y: virtual XY pad Y
-- CV1: pitch modulation
+- Audio/CV In 1: pitch modulation
+- CV1: virtual XY pad X modulation
+- CV2: virtual XY pad Y modulation
 - Pulse1: gate; unpatched means drone
 - Audio Out 1/2: stereo Buzzrito output
 - CV Out 1: approximate pitch CV monitor
