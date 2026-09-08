@@ -105,5 +105,6 @@ Pass criteria:
 - Does Audio/CV In 1 pitch scaling feel right?
 - Do CV1 and CV2 feel like faithful X/Y pad modulation inputs?
 - Does Pulse1 gating feel useful, or should it become a mode/chord trigger?
+- After this UF2 passes, add switch behavior: short press taps the original Buzzrito bee/chord mode, press-and-hold manually opens/closes gate depending on Pulse1 patching.
 - Are the LED behaviors helpful enough for a card without artwork?
 - Any control ranges that should be curved, limited, or swapped before the next UF2.

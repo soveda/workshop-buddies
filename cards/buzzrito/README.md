@@ -15,6 +15,13 @@ First-pass Workshop Computer port of the Buddies Buzzrito swarm oscillator.
 - CV Out 1: approximate pitch CV monitor
 - Pulse Out 1: gate monitor
 
+## Staged Next Change
+
+After the current test UF2 passes, add switch behavior:
+
+- Short press: equivalent to tapping the bee on the original Buzzrito, for chord mode changes.
+- Press and hold: manual gate open/close behavior, coordinated with Pulse1 patch detection.
+
 ## Notes
 
 The original Buzzrito firmware runs the RP2040 at 200 MHz, 48 kHz audio, and
