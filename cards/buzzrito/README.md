@@ -26,6 +26,9 @@ block-oriented engine into a dedicated single-sample renderer.
 ## Build
 
 ```sh
-cmake -S cards/buzzrito -B cards/buzzrito/build -DCMAKE_BUILD_TYPE=Release -DPICO_SDK_PATH=/Users/adrianvos/coding/GitHub/pico-sdk
+cmake -S cards/buzzrito -B cards/buzzrito/build -DCMAKE_BUILD_TYPE=Release
 cmake --build cards/buzzrito/build -j2
 ```
+
+The build expects `PICO_SDK_PATH` to point at
+`/Users/adrianvos/coding/GitHub/pico-sdk`.

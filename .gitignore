@@ -1,9 +1,10 @@
 build/
 *.uf2
+!cards/*/uf2/
+!cards/*/uf2/*.uf2
 *.elf
 *.bin
 *.map
 *.dis
 *.hex
 .DS_Store
-
