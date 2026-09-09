@@ -6,7 +6,7 @@
 - Clock: 192 MHz
 - Audio rate: 48 kHz via `ComputerCard::ProcessSample()`, one stereo frame per callback
 - Source mapping: Buddies Buzzrito preset map with Workshop Computer controls
-- Current diagnostic behavior: simplified saw/sub swarm renderer with original-style saw/sub levels moderated at edge presets, a tuned comb section, and a tiny deterministic per-saw wobble; original base pitch near noon on Main, no saved motion, no random XY wobble, no noise
+- Current diagnostic behavior: simplified saw/sub swarm renderer with original-style saw/sub levels moderated at edge presets, a tuned comb section, and a tiny deterministic per-saw wobble; original base pitch near noon on Main, no saved motion, no random XY wobble, no pink-noise path.
 
 ## Control Map
 
@@ -57,6 +57,8 @@ Expected behavior:
 - X and Y reshape the Buzzrito swarm in clearly different ways, including past roughly the 2-3 o'clock region.
 - Extreme X/Y positions may become sub-forward, but should retain a clear saw layer and respond to the other control through both oscillator balance and comb resonance.
 - Wobble should be limited to a slow, subtle widening of the saw swarm. It must not move the overall pitch, create random XY-style changes, or sound like wind.
+- Pink noise is intentionally absent; bundled source presets request zero `noise_level` and the inactive renderer path was removed.
+- Do not reintroduce pink noise without a separate real-time execution-budget and audio-regression test: executing its inactive generator path changed the audible result on hardware.
 - No hard lockups, sudden silence, or harsh digital clipping during knob travel.
 - LEDs 0-3 should crossfade toward the corresponding virtual-pad corner as X/Y move.
 

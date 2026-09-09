@@ -46,6 +46,12 @@ The current wobble experiment is intentionally simpler than the original: a
 very small, deterministic per-saw sine detune. It has no shared pitch drift or
 XY movement. The original no-wobble build remains available as the fallback.
 
+Pink noise is not rendered in the current test build. The bundled source
+presets all specify zero `noise_level`, and the inactive noise path was
+removed to retain the proven real-time execution behavior. This is a
+deliberate porting decision: do not reintroduce pink noise without a separate
+real-time execution-budget and audio-regression test.
+
 `uf2/workshop_buzzrito_0.1.0_pre_noise_fallback.uf2` is the selected fallback:
 the test-passed comb, micro-wobble, corrected-Y, and corrected-LED version.
 The older no-wobble fallback is retained as
