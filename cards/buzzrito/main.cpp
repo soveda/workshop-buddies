@@ -20,35 +20,28 @@ public:
 
     void __not_in_flash_func(ProcessSample)() override
     {
-        if (block_index_ == 0)
-        {
-            render_block();
-        }
-
-        AudioOut1(block_[block_index_ * 2 + 0] >> 4);
-        AudioOut2(block_[block_index_ * 2 + 1] >> 4);
-
-        block_index_ = (block_index_ + 1) & (BLOCK_SIZE - 1);
+        render_sample();
+        AudioOut1(frame_[0] >> 4);
+        AudioOut2(frame_[1] >> 4);
     }
 
 private:
-    int16_t block_[BLOCK_SIZE * 2] = {0};
-    int32_t block_index_ = 0;
+    int16_t frame_[2] = {0};
     int32_t gate_level_ = 65535;
     int32_t led_counter_ = 0;
     int32_t pad_x_smooth_ = 0;
     int32_t pad_y_smooth_ = 0;
     int chord_mode_ = 1;
 
-    void __not_in_flash_func(render_block)()
+    void __not_in_flash_func(render_sample)()
     {
         const int32_t main = KnobVal(Knob::Main);
         const int32_t x = KnobVal(Knob::X);
         const int32_t y = KnobVal(Knob::Y);
 
-        // Main is an overall tune control. The Buddies oscillator expects a
-        // pitch value in millivolts, so this gives about five octaves of sweep.
-        int32_t pitch_mv = -2000 + ((main * 5000) >> 12);
+        // Main is an overall tune control. Keep the first test range low
+        // enough that the sub oscillator is easy to find by ear.
+        int32_t pitch_mv = -4500 + ((main * 4000) >> 12);
         if (Connected(Input::Audio1))
         {
             // Audio/CV In 1 is signed 12-bit and serves as Buzzrito pitch CV.
@@ -88,7 +81,7 @@ private:
         preset.boc_amount = 0;
         preset.wobble_amount = 0;
         preset.wobble_speed = 0;
-        process_buzzrito(block_, pitch_mv, gate_q16, preset.spread, preset.glide,
+        process_buzzrito(frame_, pitch_mv, gate_q16, preset.spread, preset.glide,
                          preset.wobble_amount, preset.boc_amount, preset.wobble_speed,
                          preset.saw_level, preset.sub_level, preset.noise_level,
                          preset.comb_depth, preset.comb_mul, chord_mode_);

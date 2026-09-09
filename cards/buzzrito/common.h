@@ -2,11 +2,10 @@
 
 #include <stdint.h>
 
-// The original Buzzrito engine renders 64-sample I2S blocks. Keep that block
-// size for DSP smoothing/glide behavior, then stream one sample at a time from
-// ComputerCard::ProcessSample().
+// Keep the original 64-sample shift constants for glide/control smoothing, but
+// render a single stereo sample per Workshop Computer audio callback.
 #define SAMPLE_FREQ 48000
-#define BLOCK_SIZE 64
+#define BLOCK_SIZE 1
 #define BLOCK_SIZE_SH 6
 #define BLOCKS_PER_SECOND (SAMPLE_FREQ / BLOCK_SIZE)
 

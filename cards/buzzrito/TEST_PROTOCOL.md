@@ -4,9 +4,9 @@
 
 - UF2: `cards/buzzrito/uf2/workshop_buzzrito_0.1.0_test.uf2`
 - Clock: 192 MHz
-- Audio rate: 48 kHz via `ComputerCard::ProcessSample()`, with native 64-sample Buzzrito DSP blocks
+- Audio rate: 48 kHz via `ComputerCard::ProcessSample()`, one stereo frame per callback
 - Source mapping: Buddies Buzzrito DSP with Workshop Computer controls
-- Current diagnostic behavior: internal Buzzrito random wobble is disabled so X/Y should remain stable unless knobs or CV move
+- Current diagnostic behavior: internal Buzzrito random wobble is disabled, Main is shifted lower, and X/Y should remain stable unless knobs or CV move
 
 ## Control Map
 
@@ -51,6 +51,7 @@ Pass criteria:
 Expected behavior:
 
 - Main changes overall pitch/tune across a broad range.
+- The lowest Main settings should be clearly below the previous high-pitched build.
 - X and Y reshape the Buzzrito swarm in clearly different ways.
 - No hard lockups, sudden silence, or harsh digital clipping during knob travel.
 - LED pairs should move in opposite brightness patterns as X and Y cross center.
