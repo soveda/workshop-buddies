@@ -17,10 +17,11 @@ First-pass Workshop Computer port of the Buddies Buzzrito swarm oscillator.
 
 ## Current Test Behavior
 
-The current test UF2 holds a stable virtual pad position from X/Y knobs plus
-patched CV1/CV2. It disables Buzzrito's internal random pitch/saw wobble, uses
-a lower Main pitch range, and renders one sample per audio callback to avoid
-periodic block-render timing spikes.
+The current test UF2 is a stability diagnostic. It holds a stable virtual pad
+position from X/Y knobs plus patched CV1/CV2, uses a lower/narrower Main pitch
+range, and renders a bounded per-sample saw/sub swarm. It deliberately bypasses
+the original saved motion, random wobble, noise, and comb sections while we
+verify that pitch, pad position, and the sub oscillator can stay parked.
 
 ## Staged Next Change
 
@@ -32,9 +33,10 @@ After the current test UF2 passes, add switch behavior:
 ## Notes
 
 The original Buzzrito firmware runs the RP2040 at 200 MHz, 48 kHz audio, and
-64-sample I2S blocks. This Workshop scaffold runs at 192 MHz and keeps the
-original 64-sample shift constants for glide/control smoothing while rendering
-one stereo sample per `ComputerCard::ProcessSample()` call.
+64-sample I2S blocks. This Workshop scaffold runs at 192 MHz. The current
+diagnostic build uses the original preset map but a simplified per-sample
+oscillator renderer so Workshop Computer real-time behavior can be checked
+before reintroducing the full Buzzrito comb/noise/wobble engine.
 
 This is a buildable starting point, not yet a profiled final card. The next DSP
 pass should measure the block render time and confirm it leaves enough headroom

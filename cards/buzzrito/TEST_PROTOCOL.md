@@ -5,8 +5,8 @@
 - UF2: `cards/buzzrito/uf2/workshop_buzzrito_0.1.0_test.uf2`
 - Clock: 192 MHz
 - Audio rate: 48 kHz via `ComputerCard::ProcessSample()`, one stereo frame per callback
-- Source mapping: Buddies Buzzrito DSP with Workshop Computer controls
-- Current diagnostic behavior: internal Buzzrito random wobble is disabled, Main is shifted lower, and X/Y should remain stable unless knobs or CV move
+- Source mapping: Buddies Buzzrito preset map with Workshop Computer controls
+- Current diagnostic behavior: simplified saw/sub swarm renderer, lower/narrower Main range, no saved motion, no random wobble, no noise, no comb
 
 ## Control Map
 
@@ -103,7 +103,7 @@ Pass criteria:
 ## Notes To Capture
 
 - Does Main's range feel too wide, too narrow, or reversed?
-- Does this block-timed build sound like the expected saw swarm instead of broadband noise?
+- Does this diagnostic build sound like a stable saw swarm instead of broadband noise?
 - With X/Y knobs untouched and CV1/CV2 unpatched, does the sound stay stable instead of feeling like saved motion playback?
 - Is the sub oscillator audible in at least one X/Y region?
 - Are X and Y intuitive compared with the original XY pad?
