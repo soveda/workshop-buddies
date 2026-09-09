@@ -16,6 +16,10 @@ public:
     WorkshopBuzzrito()
     {
         std::memcpy(bp.presets, default_presets, sizeof(default_presets));
+        for (int i = 0; i < kNumSaws; ++i)
+        {
+            wobble_phase_[i] = static_cast<uint32_t>(i) * (UINT32_MAX / kNumSaws);
+        }
     }
 
     void __not_in_flash_func(ProcessSample)() override
@@ -29,7 +33,7 @@ public:
 private:
     static constexpr int kNumSaws = 16;
     static constexpr bool kInvertXKnob = false;
-    static constexpr bool kInvertYKnob = false;
+    static constexpr bool kInvertYKnob = true;
     static constexpr int32_t kSwitchHoldSamples = SAMPLE_FREQ / 4;
     int16_t frame_[2] = {0};
     uint32_t saw_phase_[kNumSaws] = {0};
@@ -38,6 +42,16 @@ private:
     uint32_t sub_delta_ = 0;
     int32_t saw_level_ = 2048;
     int32_t sub_level_ = 1024;
+    int32_t comb_depth_ = 0;
+    int32_t comb_mul_ = 7 * 256;
+    int32_t delay_time_q8_ = 16 * 256;
+    int32_t delay_l_ = 0;
+    int32_t delay_r_ = 0;
+    int32_t l_dc_ = 0;
+    int32_t r_dc_ = 0;
+    int32_t wobble_depth_q19_ = 0;
+    int32_t wobble_speed_ = 0;
+    uint32_t wobble_phase_[kNumSaws] = {0};
     int32_t gate_q16_ = 65535;
     int32_t pitch_mv_ = 1000;
     int32_t gate_level_ = 65535;
@@ -65,18 +79,24 @@ private:
 
         // X/Y knobs are raw pot readings; translate them into the original
         // Buzzrito pad coordinate space before applying CV pad modulation.
-        int32_t pad_x = knob_to_pad(x, kInvertXKnob);
-        int32_t pad_y = knob_to_pad(y, kInvertYKnob);
+        int32_t raw_x = knob_to_pad(x, kInvertXKnob);
+        int32_t raw_y = knob_to_pad(y, kInvertYKnob);
         if (Connected(Input::CV1))
         {
-            pad_x += CVIn1() * 2;
+            raw_x += CVIn1() * 2;
         }
         if (Connected(Input::CV2))
         {
-            pad_y += CVIn2() * 2;
+            raw_y += CVIn2() * 2;
         }
-        pad_x = clampi(pad_x, -4096, 4095);
-        pad_y = clampi(pad_y, -4096, 4095);
+        raw_x = clampi(raw_x, -4096, 4095);
+        raw_y = clampi(raw_y, -4096, 4095);
+
+        // The original capacitive pad has a tapered horizontal range towards
+        // its top and bottom edges. Warp the two independent controls into
+        // that shape so either knob continues to affect the morph at its ends.
+        const int32_t pad_y = raw_y;
+        const int32_t pad_x = (raw_x * (8192 - abs(raw_y))) >> 13;
         pad_x_smooth_ += make_lpf_delta(pad_x, pad_x_smooth_, 4);
         pad_y_smooth_ += make_lpf_delta(pad_y, pad_y_smooth_, 4);
 
@@ -103,11 +123,21 @@ private:
         gate_q16_ = gate_q16;
 
         buzzypreset preset = buzzy_xyinterpolate(pad_x_smooth_, pad_y_smooth_);
-        preset.boc_amount = 0;
-        preset.wobble_amount = 0;
-        preset.wobble_speed = 0;
-        saw_level_ += make_lpf_delta((preset.saw_level * preset.saw_level) >> 12, saw_level_, 5);
-        sub_level_ += make_lpf_delta((preset.sub_level * preset.sub_level) >> 12, sub_level_, 5);
+        // First wobble increment: a tiny deterministic per-saw detune. It
+        // uses the source preset map but avoids shared pitch drift and random
+        // XY motion, which were too active with fixed knob positions.
+        const int32_t wobble_depth_target = (preset.wobble_amount * 3) >> 4;
+        wobble_depth_q19_ += make_lpf_delta(wobble_depth_target, wobble_depth_q19_, 10);
+        wobble_speed_ += make_lpf_delta(preset.wobble_speed, wobble_speed_, 10);
+        const int32_t saw_target = (preset.saw_level * preset.saw_level) >> 12;
+        const int32_t raw_sub_target = (preset.sub_level * preset.sub_level) >> 12;
+        // Edge presets on the original pad can intentionally silence the saw.
+        // With pots that makes a broad, easy-to-hit sub-only area, so retain
+        // enough saw presence for X and Y morphing to remain audible.
+        const int32_t sub_target = mini(raw_sub_target, maxi(1024, saw_target + 1024));
+        saw_level_ += make_lpf_delta(saw_target, saw_level_, 5);
+        sub_level_ += make_lpf_delta(sub_target, sub_level_, 5);
+        update_comb(preset.comb_depth, preset.comb_mul, pitch_mv_);
         update_pitch_deltas(pitch_mv_, preset.spread);
 
         PulseOut1(gate_q16 > 32768);
@@ -149,7 +179,13 @@ private:
             const int32_t chord_pitch_mv = pitch_mv + chord_offset_mv(i);
             const int32_t chord_log_q19 = middle_c_offset_q19 + pitch_to_log_q19(chord_pitch_mv);
             const int32_t detune = (i - (kNumSaws / 2)) * spread;
-            uint32_t target = exp2_table(chord_log_q19 + detune);
+            // A slow, phase-offset sine creates subtle movement between saws
+            // without moving the entire instrument's pitch.
+            const uint32_t base_increment = 2048 + static_cast<uint32_t>(wobble_speed_) * 12;
+            const uint32_t increment = (base_increment * (12 + i)) >> 4;
+            wobble_phase_[i] += increment;
+            const int32_t wobble = (sin_table[wobble_phase_[i] >> 24] * wobble_depth_q19_) >> 15;
+            uint32_t target = exp2_table(chord_log_q19 + detune + wobble);
             saw_delta_[i] += static_cast<int32_t>(target - saw_delta_[i]) >> 5;
         }
     }
@@ -169,6 +205,25 @@ private:
         };
         const int32_t mode = clampi(chord_mode_, 1, 4);
         return kOffsets[mode - 1][saw_index & 3];
+    }
+
+    void update_comb(int32_t source_depth, int32_t source_mul, int32_t pitch_mv)
+    {
+        const bool negative = source_depth < 0;
+        int32_t target_depth = 4096 - abs(source_depth);
+        target_depth = (target_depth * target_depth) >> 12;
+        target_depth = 4096 - target_depth;
+        if (negative) target_depth = -target_depth;
+
+        comb_depth_ += make_lpf_delta(target_depth, comb_depth_, 10);
+        comb_mul_ += make_lpf_delta(source_mul, comb_mul_, 10);
+
+        static constexpr int32_t kMiddleCOffsetQ19 = static_cast<int32_t>(23.4806373824f * (1 << 19));
+        const int32_t pitch_log_q19 = kMiddleCOffsetQ19 + pitch_to_log_q19(pitch_mv);
+        const int32_t comb_shift = comb_mul_ * ((1 << 11) / 12);
+        int32_t target_delay_q8 = exp2_table((40 << 19) - pitch_log_q19 - comb_shift);
+        while (target_delay_q8 > 2046 * 256) target_delay_q8 >>= 1;
+        delay_time_q8_ += make_lpf_delta(target_delay_q8, delay_time_q8_, 10);
     }
 
     void __not_in_flash_func(render_stable_swarm)()
@@ -200,6 +255,34 @@ private:
         sub = (sub * sub_level_) >> 14;
         l_samp += sub;
         r_samp += sub;
+
+        // The original Buzzrito's character is dominated by this tuned,
+        // signed-feedback comb. It is retained here without its motion/noise
+        // generators so pad regions remain distinct but stationary.
+        l_dc_ += make_lpf_delta(l_samp << 8, l_dc_, 8);
+        r_dc_ += make_lpf_delta(r_samp << 8, r_dc_, 8);
+        l_samp -= l_dc_ >> 8;
+        r_samp -= r_dc_ >> 8;
+
+        int32_t read_pos = delay_pos - (delay_time_q8_ >> 8);
+        const int32_t delay_l0 = delay_buf_l[read_pos & 2047];
+        const int32_t delay_r0 = delay_buf_r[read_pos & 2047];
+        read_pos--;
+        const int32_t delay_l1 = delay_buf_l[read_pos & 2047];
+        const int32_t delay_r1 = delay_buf_r[read_pos & 2047];
+        const int32_t fraction = delay_time_q8_ & 255;
+        const int32_t delay_l_raw = delay_l0 + (((delay_l1 - delay_l0) * fraction) >> 8);
+        const int32_t delay_r_raw = delay_r0 + (((delay_r1 - delay_r0) * fraction) >> 8);
+        delay_l_ += make_lpf_delta(delay_l_raw, delay_l_, 1);
+        delay_r_ += make_lpf_delta(delay_r_raw, delay_r_, 1);
+        l_samp += (delay_l_ * comb_depth_) >> 12;
+        r_samp += (delay_r_ * comb_depth_) >> 12;
+
+        l_samp = soft_clip(l_samp);
+        r_samp = soft_clip(r_samp);
+        delay_buf_l[delay_pos] = static_cast<int16_t>(l_samp);
+        delay_buf_r[delay_pos] = static_cast<int16_t>(r_samp);
+        delay_pos = (delay_pos + 1) & 2047;
 
         const int32_t gate_mul = static_cast<int32_t>((static_cast<int64_t>(gate_q16_) * gate_q16_) >> 16);
         l_samp = static_cast<int32_t>((static_cast<int64_t>(l_samp) * gate_mul) >> 16);
@@ -235,12 +318,17 @@ private:
         if (led_counter_ < 480) return;
         led_counter_ = 0;
 
-        const int32_t x_amt = abs(pad_x);
-        const int32_t y_amt = abs(pad_y);
-        LedBrightness(0, clampi(4095 - x_amt, 0, 4095));
-        LedBrightness(1, clampi(x_amt, 0, 4095));
-        LedBrightness(2, clampi(4095 - y_amt, 0, 4095));
-        LedBrightness(3, clampi(y_amt, 0, 4095));
+        // The first four LEDs are the physical pad corners: top-left,
+        // top-right, bottom-left, bottom-right. The physical Y orientation
+        // is opposite the virtual sound coordinate, while X is shared.
+        const int32_t top_left = clampi((-pad_x - pad_y) >> 1, 0, 4095);
+        const int32_t top_right = clampi((pad_x - pad_y) >> 1, 0, 4095);
+        const int32_t bottom_left = clampi((-pad_x + pad_y) >> 1, 0, 4095);
+        const int32_t bottom_right = clampi((pad_x + pad_y) >> 1, 0, 4095);
+        LedBrightness(0, top_left);
+        LedBrightness(1, top_right);
+        LedBrightness(2, bottom_left);
+        LedBrightness(3, bottom_right);
         LedBrightness(4, gate_q16 >> 4);
         LedBrightness(5, clampi(chord_mode_ * 1024, 0, 4095));
     }

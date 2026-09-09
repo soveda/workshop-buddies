@@ -6,7 +6,7 @@
 - Clock: 192 MHz
 - Audio rate: 48 kHz via `ComputerCard::ProcessSample()`, one stereo frame per callback
 - Source mapping: Buddies Buzzrito preset map with Workshop Computer controls
-- Current diagnostic behavior: simplified saw/sub swarm renderer with original-style saw/sub level scaling, original base pitch near noon on Main, no saved motion, no random wobble, no noise, no comb
+- Current diagnostic behavior: simplified saw/sub swarm renderer with original-style saw/sub levels moderated at edge presets, a tuned comb section, and a tiny deterministic per-saw wobble; original base pitch near noon on Main, no saved motion, no random XY wobble, no noise
 
 ## Control Map
 
@@ -22,8 +22,7 @@
 - Audio Out 1/2: stereo output
 - CV Out 1: pitch CV monitor
 - Pulse Out 1: gate monitor
-- LEDs 0/1: X position/activity
-- LEDs 2/3: Y position/activity
+- LEDs 0-3: virtual pad corners, ordered top-left, top-right, bottom-left, bottom-right
 - LED 4: gate level
 - LED 5: chord mode indicator
 
@@ -49,15 +48,17 @@ Pass criteria:
 3. Sweep X from minimum to maximum while holding Main steady.
 4. Sweep Y from minimum to maximum while holding Main steady.
 5. Move X and Y together through the corners: low/low, high/low, low/high, high/high.
-6. Note whether clockwise X and clockwise Y feel backwards relative to the original pad direction.
+6. Confirm that clockwise X agrees with the corner LEDs. Y uses the intended sound direction while the physical LED top/bottom display is reversed from the virtual Y coordinate.
 
 Expected behavior:
 
 - Main changes overall pitch/tune across a broad range.
 - The original Buzzrito base note should sit near noon on Main, with audible range below it at lower settings.
-- X and Y reshape the Buzzrito swarm in clearly different ways.
+- X and Y reshape the Buzzrito swarm in clearly different ways, including past roughly the 2-3 o'clock region.
+- Extreme X/Y positions may become sub-forward, but should retain a clear saw layer and respond to the other control through both oscillator balance and comb resonance.
+- Wobble should be limited to a slow, subtle widening of the saw swarm. It must not move the overall pitch, create random XY-style changes, or sound like wind.
 - No hard lockups, sudden silence, or harsh digital clipping during knob travel.
-- LED pairs should move in opposite brightness patterns as X and Y cross center.
+- LEDs 0-3 should crossfade toward the corresponding virtual-pad corner as X/Y move.
 
 ## Gate And Pitch CV
 
@@ -135,3 +136,4 @@ Pass criteria:
 - Does switch hold make sense as open-gate-with-Pulse1 and mute-drone-without-Pulse1?
 - Are the LED behaviors helpful enough for a card without artwork?
 - Any control ranges that should be curved, limited, or swapped before the next UF2.
+- Future Switch Up motion behavior: hold Up to record the X/Y path; release to loop it; short Up press toggles playback; long Up hold while stopped erases the in-RAM loop. Defer persistent flash saving until this interaction is proven in use.

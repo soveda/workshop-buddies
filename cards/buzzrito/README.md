@@ -16,22 +16,40 @@ First-pass Workshop Computer port of the Buddies Buzzrito swarm oscillator.
 - Audio Out 1/2: stereo Buzzrito output
 - CV Out 1: approximate pitch CV monitor
 - Pulse Out 1: gate monitor
+- LEDs 0-3: virtual pad corners, ordered top-left, top-right, bottom-left, bottom-right
+- LED 4: gate level
 - LED 5: chord mode indicator
 
 ## Pad Axis Mapping
 
 The original Buzzrito pad reports a two-dimensional position, not knob travel.
 Workshop X/Y readings are converted into that pad coordinate space in
-`main.cpp` with `kInvertXKnob` and `kInvertYKnob` flags available if either
-physical knob feels backwards during testing.
+`main.cpp`. The square knob/CV range is tapered to the original pad's usable
+edge geometry, so both controls continue to morph the sound near their ends.
+The current hardware mapping uses normal X and inverted Y, so clockwise Y
+matches the intended sound direction. LEDs retain the physical Y orientation,
+so their top and bottom display is reversed relative to the virtual Y sound
+coordinate.
 
 ## Current Test Behavior
 
 The current test UF2 is a stability diagnostic. It holds a stable virtual pad
 position from X/Y knobs plus patched CV1/CV2, puts the original Buzzrito base
-pitch near noon on Main, and renders a bounded per-sample saw/sub swarm. It deliberately bypasses
-the original saved motion, random wobble, noise, and comb sections while we
-verify that pitch, pad position, and the sub oscillator can stay parked.
+pitch near noon on Main, and renders a bounded per-sample saw/sub swarm. It
+deliberately bypasses the original saved motion, random wobble, and noise
+sections while we verify that pitch and pad position can stay parked. It does
+include the original-style tuned comb section because that is essential to the
+upper-pad character. At edge presets it also limits sub level relative to the
+saw, because direct knobs otherwise make the original sub-only zones too broad.
+
+The current wobble experiment is intentionally simpler than the original: a
+very small, deterministic per-saw sine detune. It has no shared pitch drift or
+XY movement. The original no-wobble build remains available as the fallback.
+
+`uf2/workshop_buzzrito_0.1.0_pre_noise_fallback.uf2` is the selected fallback:
+the test-passed comb, micro-wobble, corrected-Y, and corrected-LED version.
+The older no-wobble fallback is retained as
+`uf2/workshop_buzzrito_0.1.0_pre_wobble_fallback.uf2`.
 
 ## Notes
 
