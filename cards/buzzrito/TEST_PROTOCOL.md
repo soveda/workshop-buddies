@@ -6,6 +6,7 @@
 - Clock: 192 MHz
 - Audio rate: 48 kHz via `ComputerCard::ProcessSample()`, with native 64-sample Buzzrito DSP blocks
 - Source mapping: Buddies Buzzrito DSP with Workshop Computer controls
+- Current diagnostic behavior: internal Buzzrito random wobble is disabled so X/Y should remain stable unless knobs or CV move
 
 ## Control Map
 
@@ -102,6 +103,7 @@ Pass criteria:
 
 - Does Main's range feel too wide, too narrow, or reversed?
 - Does this block-timed build sound like the expected saw swarm instead of broadband noise?
+- With X/Y knobs untouched and CV1/CV2 unpatched, does the sound stay stable instead of feeling like saved motion playback?
 - Is the sub oscillator audible in at least one X/Y region?
 - Are X and Y intuitive compared with the original XY pad?
 - Does Audio/CV In 1 pitch scaling feel right?

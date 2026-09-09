@@ -15,6 +15,12 @@ First-pass Workshop Computer port of the Buddies Buzzrito swarm oscillator.
 - CV Out 1: approximate pitch CV monitor
 - Pulse Out 1: gate monitor
 
+## Current Test Behavior
+
+The current test UF2 holds a stable virtual pad position from X/Y knobs plus
+patched CV1/CV2. It disables Buzzrito's internal random pitch/saw wobble so
+knob-only testing does not feel like the original saved motion playback.
+
 ## Staged Next Change
 
 After the current test UF2 passes, add switch behavior:

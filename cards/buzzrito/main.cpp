@@ -36,6 +36,8 @@ private:
     int32_t block_index_ = 0;
     int32_t gate_level_ = 65535;
     int32_t led_counter_ = 0;
+    int32_t pad_x_smooth_ = 0;
+    int32_t pad_y_smooth_ = 0;
     int chord_mode_ = 1;
 
     void __not_in_flash_func(render_block)()
@@ -67,6 +69,8 @@ private:
         }
         pad_x = clampi(pad_x, -4096, 4095);
         pad_y = clampi(pad_y, -4096, 4095);
+        pad_x_smooth_ += make_lpf_delta(pad_x, pad_x_smooth_, 4);
+        pad_y_smooth_ += make_lpf_delta(pad_y, pad_y_smooth_, 4);
 
         int32_t gate_q16 = 65535;
         if (Connected(Input::Pulse1))
@@ -80,12 +84,19 @@ private:
             gate_level_ = 65535;
         }
 
-        process_buzzrito_xy(block_, pitch_mv, gate_q16, pad_x, pad_y, chord_mode_);
+        buzzypreset preset = buzzy_xyinterpolate(pad_x_smooth_, pad_y_smooth_);
+        preset.boc_amount = 0;
+        preset.wobble_amount = 0;
+        preset.wobble_speed = 0;
+        process_buzzrito(block_, pitch_mv, gate_q16, preset.spread, preset.glide,
+                         preset.wobble_amount, preset.boc_amount, preset.wobble_speed,
+                         preset.saw_level, preset.sub_level, preset.noise_level,
+                         preset.comb_depth, preset.comb_mul, chord_mode_);
 
         PulseOut1(gate_q16 > 32768);
         CVOut1(clamp12(pitch_mv / 3));
 
-        update_leds(pad_x, pad_y, gate_q16);
+        update_leds(pad_x_smooth_, pad_y_smooth_, gate_q16);
     }
 
     static int16_t clamp12(int32_t value)
