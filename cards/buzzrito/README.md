@@ -45,7 +45,8 @@ Middle plays the path: closed gestures loop and open gestures ping-pong. Hold
 X/Y stationary while Up is selected, then return to Middle, to make a parked
 one-point recording and stop movement. The path is about 2.05 seconds at full
 length, sampled every 8 ms and interpolated/smoothed at 1 kHz. It is in RAM
-only and is cleared by power cycling.
+only and is cleared by power cycling. Flick Up and return to Middle in under
+100 ms to clear the path and restore live X/Y control.
 
 During playback, a patched CV1 bypasses recorded X while recorded Y continues;
 CV2 does the converse. With both CV inputs patched, the whole recorded path is
@@ -61,10 +62,11 @@ removed to retain the proven real-time execution behavior. This is a
 deliberate porting decision: do not reintroduce pink noise without a separate
 real-time execution-budget and audio-regression test.
 
-`uf2/workshop_buzzrito_0.1.0_pre_noise_fallback.uf2` is the selected fallback:
-the test-passed comb, micro-wobble, corrected-Y, and corrected-LED version.
-The older no-wobble fallback is retained as
-`uf2/workshop_buzzrito_0.1.0_pre_wobble_fallback.uf2`.
+The active image is `uf2/workshop_buzzrito_0.1.0_test.uf2`. Older images live
+under `uf2/previous-versions/`: `pre_noise_baseline/` is the passed comb and
+micro-wobble baseline, `pre_wobble/` is the older no-wobble version, and
+`switch_up_motion_passed/` is the passed motion version with a matching source
+snapshot under `fallback/switch_up_motion_passed/`.
 
 ## Notes
 

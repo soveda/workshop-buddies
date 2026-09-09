@@ -117,11 +117,13 @@ Expected behavior:
 4. During playback, patch CV1 and confirm live X/CV1 bypasses only saved X while saved Y continues.
 5. Repeat with CV2, then patch both inputs and confirm the complete saved path is bypassed.
 6. Confirm Pulse2 has no effect on motion.
+7. Flick Switch Up and return to Middle in under 100 ms. Confirm the saved path clears and X/Y are live again.
 
 Expected behavior:
 
 - Switch Up replaces the prior path; it does not append to it.
 - A stationary recording provides the stop-motion gesture.
+- A quick Up flick clears saved motion and restores live X/Y control.
 - The full-length recording is about 2.05 seconds, retained only in RAM until power off.
 - Motion playback remains smooth, stable, and phase-locked to the audio callback.
 

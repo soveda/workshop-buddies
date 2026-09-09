@@ -65,7 +65,7 @@ controls:
   switch:
     up:
       name: Record XY Motion
-      description: Replaces the prior X/Y path while held. Move X/Y to record motion, or leave them still to record a parked point.
+      description: Hold for at least 100 ms to replace the prior X/Y path. Move X/Y to record motion, or leave them still to record a parked point. Flick Up and back to Middle in under 100 ms to clear the path and restore live X/Y.
     middle:
       name: Play XY Motion
       description: Plays the saved path; closed gestures loop and open gestures ping-pong. Without a recording, X/Y remain live.

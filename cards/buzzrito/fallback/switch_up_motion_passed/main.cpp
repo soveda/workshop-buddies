@@ -39,7 +39,6 @@ private:
     static constexpr int32_t kMotionPointDivider = 8;
     static constexpr int32_t kMotionMaxPoints = 256;
     static constexpr int32_t kMotionPingPongThreshold = 1365;
-    static constexpr int32_t kMotionClearTicks = 100;
     struct MotionPoint
     {
         int16_t x;
@@ -73,7 +72,6 @@ private:
     MotionPoint motion_[kMotionMaxPoints] = {};
     int32_t motion_sample_counter_ = 0;
     int32_t motion_record_divider_ = 0;
-    int32_t motion_up_ticks_ = 0;
     int32_t motion_play_substep_ = 0;
     int32_t motion_length_ = 0;
     int32_t motion_play_position_ = 0;
@@ -218,12 +216,10 @@ private:
                 motion_playing_ = false;
                 motion_length_ = 0;
                 motion_record_divider_ = 0;
-                motion_up_ticks_ = 0;
                 motion_x_ = live_x;
                 motion_y_ = live_y;
             }
 
-            motion_up_ticks_++;
             motion_record_divider_++;
             if (motion_record_divider_ < kMotionPointDivider)
             {
@@ -243,19 +239,7 @@ private:
         if (motion_recording_)
         {
             motion_recording_ = false;
-            if (motion_up_ticks_ < kMotionClearTicks)
-            {
-                // A quick Up flick clears the stored path and restores live
-                // X/Y control. A longer Up hold creates a new recording.
-                motion_length_ = 0;
-                motion_playing_ = false;
-                motion_pingpong_ = false;
-                motion_play_reverse_ = false;
-                motion_x_ = live_x;
-                motion_y_ = live_y;
-                return;
-            }
-            // A held, stationary Up gesture is a one-point recording: the
+            // A brief, stationary Up gesture is a one-point recording: the
             // Workshop equivalent of holding one place on the original pad.
             if (motion_length_ == 0)
             {
