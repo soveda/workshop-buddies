@@ -242,7 +242,7 @@ private:
         LedBrightness(2, clampi(4095 - y_amt, 0, 4095));
         LedBrightness(3, clampi(y_amt, 0, 4095));
         LedBrightness(4, gate_q16 >> 4);
-        LedBrightness(5, chord_mode_ * 1024);
+        LedBrightness(5, clampi(chord_mode_ * 1024, 0, 4095));
     }
 };
 
