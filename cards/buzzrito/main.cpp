@@ -179,7 +179,7 @@ private:
         for (int i = 0; i < kNumSaws; ++i)
         {
             saw_phase_[i] += saw_delta_[i];
-            const int32_t saw = static_cast<int32_t>(saw_phase_[i] >> 16) - 32768;
+            const int32_t saw = (static_cast<int32_t>(saw_phase_[i] >> 16) - 32768) << 2;
             if (i & 1)
             {
                 r_samp += saw;
@@ -190,14 +190,14 @@ private:
             }
         }
 
-        l_samp = ((l_samp >> 3) * saw_level_) >> 12;
-        r_samp = ((r_samp >> 3) * saw_level_) >> 12;
+        l_samp = ((l_samp >> 3) * saw_level_) >> 14;
+        r_samp = ((r_samp >> 3) * saw_level_) >> 14;
 
         sub_phase_ += sub_delta_;
         int32_t sub = static_cast<int32_t>(sub_phase_ >> 16);
         sub = (sub < 32768) ? sub : 65535 - sub;
-        sub = (sub - 16384) << 1;
-        sub = (sub * sub_level_) >> 12;
+        sub = (sub - 16384) << 3;
+        sub = (sub * sub_level_) >> 14;
         l_samp += sub;
         r_samp += sub;
 

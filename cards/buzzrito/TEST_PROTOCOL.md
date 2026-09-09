@@ -6,7 +6,7 @@
 - Clock: 192 MHz
 - Audio rate: 48 kHz via `ComputerCard::ProcessSample()`, one stereo frame per callback
 - Source mapping: Buddies Buzzrito preset map with Workshop Computer controls
-- Current diagnostic behavior: simplified saw/sub swarm renderer, original base pitch near noon on Main, no saved motion, no random wobble, no noise, no comb
+- Current diagnostic behavior: simplified saw/sub swarm renderer with original-style saw/sub level scaling, original base pitch near noon on Main, no saved motion, no random wobble, no noise, no comb
 
 ## Control Map
 
@@ -125,6 +125,7 @@ Pass criteria:
 - Does this diagnostic build sound like a stable saw swarm instead of broadband noise?
 - With X/Y knobs untouched and CV1/CV2 unpatched, does the sound stay stable instead of feeling like saved motion playback?
 - Is the sub oscillator audible in at least one X/Y region?
+- Do saw/sub levels across the X/Y map feel closer to the original Buzzrito module?
 - Are X and Y intuitive compared with the original XY pad?
 - Should `kInvertXKnob` or `kInvertYKnob` be flipped?
 - Does Audio/CV In 1 pitch scaling feel right?
