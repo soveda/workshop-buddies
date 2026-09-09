@@ -10,6 +10,7 @@ First-pass Workshop Computer port of the Buddies Buzzrito swarm oscillator.
 - Audio/CV In 1: pitch modulation
 - CV1: virtual XY pad X modulation
 - CV2: virtual XY pad Y modulation
+- Switch up: record a new virtual-pad path; return to Middle to play it
 - Pulse1: gate; unpatched means drone
 - Switch down short press: bee tap / chord mode cycle
 - Switch down hold: opens the gate when Pulse1 is patched, closes the drone when Pulse1 is unpatched
@@ -18,7 +19,7 @@ First-pass Workshop Computer port of the Buddies Buzzrito swarm oscillator.
 - Pulse Out 1: gate monitor
 - LEDs 0-3: virtual pad corners, ordered top-left, top-right, bottom-left, bottom-right
 - LED 4: gate level
-- LED 5: chord mode indicator
+- LED 5: chord mode indicator, full brightness while recording
 
 ## Pad Axis Mapping
 
@@ -33,14 +34,22 @@ coordinate.
 
 ## Current Test Behavior
 
-The current test UF2 is a stability diagnostic. It holds a stable virtual pad
-position from X/Y knobs plus patched CV1/CV2, puts the original Buzzrito base
-pitch near noon on Main, and renders a bounded per-sample saw/sub swarm. It
-deliberately bypasses the original saved motion, random wobble, and noise
-sections while we verify that pitch and pad position can stay parked. It does
-include the original-style tuned comb section because that is essential to the
-upper-pad character. At edge presets it also limits sub level relative to the
-saw, because direct knobs otherwise make the original sub-only zones too broad.
+The current UF2 is the hardware-passed Workshop Buzzrito port. It puts the
+original Buzzrito base pitch near noon on Main and renders a bounded
+per-sample saw/sub swarm with the original-style tuned comb section. At edge
+presets it limits sub level relative to the saw, because direct knobs otherwise
+make the original sub-only zones too broad.
+
+Switch Up records a new X/Y path, replacing the previous one. Returning to
+Middle plays the path: closed gestures loop and open gestures ping-pong. Hold
+X/Y stationary while Up is selected, then return to Middle, to make a parked
+one-point recording and stop movement. The path is about 2.05 seconds at full
+length, sampled every 8 ms and interpolated/smoothed at 1 kHz. It is in RAM
+only and is cleared by power cycling.
+
+During playback, a patched CV1 bypasses recorded X while recorded Y continues;
+CV2 does the converse. With both CV inputs patched, the whole recorded path is
+bypassed by the live virtual-pad position. Pulse2 has no motion role.
 
 The current wobble experiment is intentionally simpler than the original: a
 very small, deterministic per-saw sine detune. It has no shared pitch drift or
@@ -65,9 +74,9 @@ diagnostic build uses the original preset map but a simplified per-sample
 oscillator renderer so Workshop Computer real-time behavior can be checked
 before reintroducing the full Buzzrito comb/noise/wobble engine.
 
-This is a buildable starting point, not yet a profiled final card. The next DSP
-pass should measure the block render time and confirm it leaves enough headroom
-inside the Workshop Computer audio callback.
+The audio renderer and motion control tick execute from RAM at 192 MHz. The
+motion playhead is derived from the same 48 kHz audio interrupt, so it has no
+independent control clock to drift against audio.
 
 ## Build
 

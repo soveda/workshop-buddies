@@ -1,0 +1,118 @@
+draft: false
+Name: Workshop Buzzrito
+short-description: Stereo saw and sub swarm oscillator with recordable XY motion.
+summary: |
+  A Workshop Computer port of Buddies Buzzrito: a stereo saw/sub swarm with a
+  virtual XY pad, tuned comb character, chord modes, and a recordable motion
+  path. Record X/Y movement with the switch Up; return to Middle to loop or
+  ping-pong the path. A stationary recording parks the sound.
+Language: C++ (ComputerCard)
+Creator: Adrian Vos
+Version: "0.1.0"
+Status: Beta - hardware-tested
+License: MIT
+date-created: 2026-09-09
+date-updated: 2026-09-09
+repository: https://github.com/soveda/workshop-buddies
+tags:
+  - synthesizer
+  - oscillator
+  - drone
+  - cv
+  - stereo
+
+uf2:
+  - path: uf2/workshop_buzzrito_0.1.0_test.uf2
+    name: Workshop Buzzrito 0.1.0
+
+panel:
+  inputs:
+    - id: AudioIn1
+      name: Pitch CV
+      description: Bipolar pitch modulation added to Main tune.
+      type: cv
+    - id: CVIn1
+      name: X CV
+      description: Modulates virtual-pad X; during motion playback, patched X CV bypasses saved X.
+      type: cv
+    - id: CVIn2
+      name: Y CV
+      description: Modulates virtual-pad Y; during motion playback, patched Y CV bypasses saved Y.
+      type: cv
+    - id: PulseIn1
+      name: Gate In
+      description: Gates the oscillator; leave unpatched for drone operation.
+      type: pulse
+  outputs:
+    - id: AudioOut1
+      name: Stereo Left
+      description: Left saw/sub swarm output.
+      type: audio
+    - id: AudioOut2
+      name: Stereo Right
+      description: Right saw/sub swarm output.
+      type: audio
+    - id: CVOut1
+      name: Pitch Monitor
+      description: Approximate pitch control-voltage monitor.
+      type: cv
+    - id: PulseOut1
+      name: Gate Monitor
+      description: High while the audio gate is open.
+      type: pulse
+
+controls:
+  switch:
+    up:
+      name: Record XY Motion
+      description: Replaces the prior X/Y path while held. Move X/Y to record motion, or leave them still to record a parked point.
+    middle:
+      name: Play XY Motion
+      description: Plays the saved path; closed gestures loop and open gestures ping-pong. Without a recording, X/Y remain live.
+    down:
+      name: Gate Override
+      description: Hold to force the gate open with Pulse In 1 patched, or mute the unpatched drone.
+    tap:
+      name: Chord Mode
+      description: Briefly press and release Down to cycle the four Buzzrito chord modes.
+  knobs:
+    - main:
+        name: Tune
+        description: Overall pitch; the original Buzzrito base note is near noon.
+      x:
+        name: Virtual Pad X
+        description: Horizontal sound position, recorded while the switch is Up.
+      y:
+        name: Virtual Pad Y
+        description: Vertical sound position, recorded while the switch is Up.
+  leds:
+    - display: list
+      items:
+        - id: LED0
+          name: Virtual Pad Top Left
+          description: Brightness reflects the virtual pad's top-left corner weight.
+        - id: LED1
+          name: Virtual Pad Top Right
+          description: Brightness reflects the virtual pad's top-right corner weight.
+        - id: LED2
+          name: Virtual Pad Bottom Left
+          description: Brightness reflects the virtual pad's bottom-left corner weight.
+        - id: LED3
+          name: Virtual Pad Bottom Right
+          description: Brightness reflects the virtual pad's bottom-right corner weight.
+        - id: LED4
+          name: Gate Level
+          description: Brightness follows the audio gate level.
+        - id: LED5
+          name: Chord Mode / Record
+          description: Indicates chord mode in Middle; full brightness while recording motion.
+
+host:
+  notes: >
+    Motion is stored in RAM only and is cleared on power cycling. A full path
+    is about 2.05 seconds. With both X and Y CV inputs patched during playback,
+    the saved motion is fully bypassed by the live virtual-pad position.
+
+contact:
+  social:
+    github: https://github.com/soveda

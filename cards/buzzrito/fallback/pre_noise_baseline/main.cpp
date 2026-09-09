@@ -35,15 +35,6 @@ private:
     static constexpr bool kInvertXKnob = false;
     static constexpr bool kInvertYKnob = true;
     static constexpr int32_t kSwitchHoldSamples = SAMPLE_FREQ / 4;
-    static constexpr int32_t kMotionControlPeriod = 48;
-    static constexpr int32_t kMotionPointDivider = 8;
-    static constexpr int32_t kMotionMaxPoints = 256;
-    static constexpr int32_t kMotionPingPongThreshold = 1365;
-    struct MotionPoint
-    {
-        int16_t x;
-        int16_t y;
-    };
     int16_t frame_[2] = {0};
     uint32_t saw_phase_[kNumSaws] = {0};
     uint32_t sub_phase_ = 0;
@@ -69,18 +60,6 @@ private:
     int32_t pad_y_smooth_ = 0;
     int32_t switch_down_samples_ = 0;
     int chord_mode_ = 1;
-    MotionPoint motion_[kMotionMaxPoints] = {};
-    int32_t motion_sample_counter_ = 0;
-    int32_t motion_record_divider_ = 0;
-    int32_t motion_play_substep_ = 0;
-    int32_t motion_length_ = 0;
-    int32_t motion_play_position_ = 0;
-    int32_t motion_x_ = 0;
-    int32_t motion_y_ = 0;
-    bool motion_recording_ = false;
-    bool motion_playing_ = false;
-    bool motion_pingpong_ = false;
-    bool motion_play_reverse_ = false;
 
     void __not_in_flash_func(update_controls)()
     {
@@ -100,15 +79,13 @@ private:
 
         // X/Y knobs are raw pot readings; translate them into the original
         // Buzzrito pad coordinate space before applying CV pad modulation.
-        const bool cv1_connected = Connected(Input::CV1);
-        const bool cv2_connected = Connected(Input::CV2);
         int32_t raw_x = knob_to_pad(x, kInvertXKnob);
         int32_t raw_y = knob_to_pad(y, kInvertYKnob);
-        if (cv1_connected)
+        if (Connected(Input::CV1))
         {
             raw_x += CVIn1() * 2;
         }
-        if (cv2_connected)
+        if (Connected(Input::CV2))
         {
             raw_y += CVIn2() * 2;
         }
@@ -124,12 +101,6 @@ private:
         pad_y_smooth_ += make_lpf_delta(pad_y, pad_y_smooth_, 4);
 
         update_switch();
-        update_motion(pad_x_smooth_, pad_y_smooth_);
-        // A patched CV axis takes priority over its saved axis. This keeps an
-        // external CV source immediately useful while the other axis can
-        // continue playing the recorded path.
-        const int32_t sound_pad_x = (motion_playing_ && !cv1_connected) ? motion_x_ : pad_x_smooth_;
-        const int32_t sound_pad_y = (motion_playing_ && !cv2_connected) ? motion_y_ : pad_y_smooth_;
 
         const bool pulse1_connected = Connected(Input::Pulse1);
         const bool switch_held = switch_down_samples_ >= kSwitchHoldSamples;
@@ -151,7 +122,7 @@ private:
         }
         gate_q16_ = gate_q16;
 
-        buzzypreset preset = buzzy_xyinterpolate(sound_pad_x, sound_pad_y);
+        buzzypreset preset = buzzy_xyinterpolate(pad_x_smooth_, pad_y_smooth_);
         // First wobble increment: a tiny deterministic per-saw detune. It
         // uses the source preset map but avoids shared pitch drift and random
         // XY motion, which were too active with fixed knob positions.
@@ -172,7 +143,7 @@ private:
         PulseOut1(gate_q16 > 32768);
         CVOut1(clamp12(pitch_mv_ / 3));
 
-        update_leds(sound_pad_x, sound_pad_y, gate_q16);
+        update_leds(pad_x_smooth_, pad_y_smooth_, gate_q16);
     }
 
     void __not_in_flash_func(update_switch)()
@@ -195,131 +166,6 @@ private:
             }
         }
         switch_down_samples_ = 0;
-    }
-
-    void __not_in_flash_func(update_motion)(int32_t live_x, int32_t live_y)
-    {
-        // Keep recorder work off the per-sample path. Control values remain
-        // sampled inside ProcessSample(), as required by ComputerCard.
-        motion_sample_counter_++;
-        if (motion_sample_counter_ < kMotionControlPeriod)
-        {
-            return;
-        }
-        motion_sample_counter_ = 0;
-
-        if (SwitchVal() == Switch::Up)
-        {
-            if (!motion_recording_)
-            {
-                motion_recording_ = true;
-                motion_playing_ = false;
-                motion_length_ = 0;
-                motion_record_divider_ = 0;
-                motion_x_ = live_x;
-                motion_y_ = live_y;
-            }
-
-            motion_record_divider_++;
-            if (motion_record_divider_ < kMotionPointDivider)
-            {
-                return;
-            }
-            motion_record_divider_ = 0;
-
-            if (motion_length_ < kMotionMaxPoints)
-            {
-                motion_[motion_length_].x = static_cast<int16_t>(live_x);
-                motion_[motion_length_].y = static_cast<int16_t>(live_y);
-                motion_length_++;
-            }
-            return;
-        }
-
-        if (motion_recording_)
-        {
-            motion_recording_ = false;
-            // A brief, stationary Up gesture is a one-point recording: the
-            // Workshop equivalent of holding one place on the original pad.
-            if (motion_length_ == 0)
-            {
-                motion_[0].x = static_cast<int16_t>(live_x);
-                motion_[0].y = static_cast<int16_t>(live_y);
-                motion_length_ = 1;
-            }
-            motion_x_ = motion_[0].x;
-            motion_y_ = motion_[0].y;
-            motion_play_position_ = 0;
-            motion_play_substep_ = 0;
-            const MotionPoint end = motion_[motion_length_ - 1];
-            motion_pingpong_ = abs(motion_[0].x - end.x) + abs(motion_[0].y - end.y) > kMotionPingPongThreshold;
-            motion_play_reverse_ = false;
-            motion_playing_ = true;
-        }
-
-        if (!motion_playing_)
-        {
-            return;
-        }
-
-        int32_t next_position = motion_play_position_;
-        if (motion_play_reverse_)
-        {
-            if (motion_play_position_ > 0)
-            {
-                next_position = motion_play_position_ - 1;
-            }
-            else if (!motion_pingpong_)
-            {
-                next_position = motion_length_ - 1;
-            }
-        }
-        else if (motion_play_position_ + 1 < motion_length_)
-        {
-            next_position = motion_play_position_ + 1;
-        }
-        else if (!motion_pingpong_)
-        {
-            next_position = 0;
-        }
-        const int32_t current_x = motion_[motion_play_position_].x;
-        const int32_t current_y = motion_[motion_play_position_].y;
-        const int32_t target_x = current_x + (((motion_[next_position].x - current_x) * motion_play_substep_) >> 3);
-        const int32_t target_y = current_y + (((motion_[next_position].y - current_y) * motion_play_substep_) >> 3);
-        motion_x_ += (target_x - motion_x_) >> 2;
-        motion_y_ += (target_y - motion_y_) >> 2;
-
-        motion_play_substep_++;
-        if (motion_play_substep_ >= kMotionPointDivider)
-        {
-            motion_play_substep_ = 0;
-            if (motion_play_reverse_)
-            {
-                if (motion_play_position_ == 0)
-                {
-                    motion_play_reverse_ = false;
-                }
-                else
-                {
-                    motion_play_position_--;
-                }
-            }
-            else if (motion_play_position_ + 1 >= motion_length_)
-            {
-                if (motion_pingpong_)
-                {
-                    motion_play_reverse_ = true;
-                }
-                else
-                {
-                    motion_play_position_ = 0;
-                }
-            }
-            else
-            {
-                motion_play_position_++;
-            }
-        }
     }
 
     void __not_in_flash_func(update_pitch_deltas)(int32_t pitch_mv, int32_t spread)
@@ -484,7 +330,7 @@ private:
         LedBrightness(2, bottom_left);
         LedBrightness(3, bottom_right);
         LedBrightness(4, gate_q16 >> 4);
-        LedBrightness(5, motion_recording_ ? 4095 : clampi(chord_mode_ * 1024, 0, 4095));
+        LedBrightness(5, clampi(chord_mode_ * 1024, 0, 4095));
     }
 };
 

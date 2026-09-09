@@ -6,7 +6,7 @@
 - Clock: 192 MHz
 - Audio rate: 48 kHz via `ComputerCard::ProcessSample()`, one stereo frame per callback
 - Source mapping: Buddies Buzzrito preset map with Workshop Computer controls
-- Current diagnostic behavior: simplified saw/sub swarm renderer with original-style saw/sub levels moderated at edge presets, a tuned comb section, and a tiny deterministic per-saw wobble; original base pitch near noon on Main, no saved motion, no random XY wobble, no pink-noise path.
+- Current behavior: hardware-passed saw/sub swarm renderer with moderated edge sub levels, tuned comb, deterministic per-saw wobble, Switch Up motion recording, and no pink-noise path.
 
 ## Control Map
 
@@ -16,6 +16,7 @@
 - Audio/CV In 1: pitch modulation, roughly 3 mV per signed ADC count
 - CV1: virtual XY pad X modulation
 - CV2: virtual XY pad Y modulation
+- Switch up: record a new X/Y path; return to Middle to play it
 - Switch down short press: bee tap / chord mode cycle
 - Switch down hold: opens the gate when Pulse1 is patched, closes the drone when Pulse1 is unpatched
 - Pulse1: gate input; unpatched means drone
@@ -24,7 +25,7 @@
 - Pulse Out 1: gate monitor
 - LEDs 0-3: virtual pad corners, ordered top-left, top-right, bottom-left, bottom-right
 - LED 4: gate level
-- LED 5: chord mode indicator
+- LED 5: chord mode indicator; full brightness while recording
 
 ## Flash Test
 
@@ -108,6 +109,22 @@ Expected behavior:
 - CV2 offsets the virtual pad Y position.
 - X/Y modulation remains bounded at the pad edges rather than wrapping or locking up.
 
+## Saved Motion
+
+1. Leave CV1 and CV2 unpatched. Move Switch Up, sweep X/Y for up to two seconds, then return to Middle.
+2. Confirm a closed path loops and an open path moves forward then backward without a sharp end-to-start jump.
+3. Record a stationary point by holding X/Y still in Up for at least 100 ms, then returning to Middle.
+4. During playback, patch CV1 and confirm live X/CV1 bypasses only saved X while saved Y continues.
+5. Repeat with CV2, then patch both inputs and confirm the complete saved path is bypassed.
+6. Confirm Pulse2 has no effect on motion.
+
+Expected behavior:
+
+- Switch Up replaces the prior path; it does not append to it.
+- A stationary recording provides the stop-motion gesture.
+- The full-length recording is about 2.05 seconds, retained only in RAM until power off.
+- Motion playback remains smooth, stable, and phase-locked to the audio callback.
+
 ## Audio Quality Checks
 
 1. Listen at low, medium, and high Main settings.
@@ -126,7 +143,7 @@ Pass criteria:
 
 - Does Main's range feel too wide, too narrow, or reversed?
 - Does this diagnostic build sound like a stable saw swarm instead of broadband noise?
-- With X/Y knobs untouched and CV1/CV2 unpatched, does the sound stay stable instead of feeling like saved motion playback?
+- Does Switch Up capture and replay the intended X/Y gesture without clicks, stutter, or unintended control changes?
 - Is the sub oscillator audible in at least one X/Y region?
 - Do saw/sub levels across the X/Y map feel closer to the original Buzzrito module?
 - Are X and Y intuitive compared with the original XY pad?
@@ -137,5 +154,4 @@ Pass criteria:
 - Does the switch short-press chord cycle feel like the original bee tap?
 - Does switch hold make sense as open-gate-with-Pulse1 and mute-drone-without-Pulse1?
 - Are the LED behaviors helpful enough for a card without artwork?
-- Any control ranges that should be curved, limited, or swapped before the next UF2.
-- Future Switch Up motion behavior: hold Up to record the X/Y path; release to loop it; short Up press toggles playback; long Up hold while stopped erases the in-RAM loop. Defer persistent flash saving until this interaction is proven in use.
+- Any control ranges that should be curved, limited, or swapped in a future revision.
