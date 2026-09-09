@@ -15,6 +15,13 @@ First-pass Workshop Computer port of the Buddies Buzzrito swarm oscillator.
 - CV Out 1: approximate pitch CV monitor
 - Pulse Out 1: gate monitor
 
+## Pad Axis Mapping
+
+The original Buzzrito pad reports a two-dimensional position, not knob travel.
+Workshop X/Y readings are converted into that pad coordinate space in
+`main.cpp` with `kInvertXKnob` and `kInvertYKnob` flags available if either
+physical knob feels backwards during testing.
+
 ## Current Test Behavior
 
 The current test UF2 is a stability diagnostic. It holds a stable virtual pad

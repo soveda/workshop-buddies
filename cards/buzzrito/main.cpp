@@ -28,6 +28,8 @@ public:
 
 private:
     static constexpr int kNumSaws = 16;
+    static constexpr bool kInvertXKnob = false;
+    static constexpr bool kInvertYKnob = false;
     int16_t frame_[2] = {0};
     uint32_t saw_phase_[kNumSaws] = {0};
     uint32_t sub_phase_ = 0;
@@ -59,10 +61,10 @@ private:
         }
         pitch_mv_ += make_lpf_delta(pitch_mv, pitch_mv_, 6);
 
-        // X/Y knobs replace the original capacitive XY pad, with CV1/CV2
-        // acting as the original Buzzrito X/Y CV inputs.
-        int32_t pad_x = ((x - 2048) * 4096) >> 11;
-        int32_t pad_y = ((y - 2048) * 4096) >> 11;
+        // X/Y knobs are raw pot readings; translate them into the original
+        // Buzzrito pad coordinate space before applying CV pad modulation.
+        int32_t pad_x = knob_to_pad(x, kInvertXKnob);
+        int32_t pad_y = knob_to_pad(y, kInvertYKnob);
         if (Connected(Input::CV1))
         {
             pad_x += CVIn1() * 2;
@@ -161,6 +163,12 @@ private:
         if (value > 2047) return 2047;
         if (value < -2048) return -2048;
         return static_cast<int16_t>(value);
+    }
+
+    static int32_t knob_to_pad(int32_t knob, bool invert)
+    {
+        int32_t pad = ((knob - 2048) * 4096) >> 11;
+        return invert ? -pad : pad;
     }
 
     static int16_t clamp16(int32_t value)

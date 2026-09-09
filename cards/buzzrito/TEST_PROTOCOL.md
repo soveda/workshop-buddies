@@ -47,6 +47,7 @@ Pass criteria:
 3. Sweep X from minimum to maximum while holding Main steady.
 4. Sweep Y from minimum to maximum while holding Main steady.
 5. Move X and Y together through the corners: low/low, high/low, low/high, high/high.
+6. Note whether clockwise X and clockwise Y feel backwards relative to the original pad direction.
 
 Expected behavior:
 
@@ -107,6 +108,7 @@ Pass criteria:
 - With X/Y knobs untouched and CV1/CV2 unpatched, does the sound stay stable instead of feeling like saved motion playback?
 - Is the sub oscillator audible in at least one X/Y region?
 - Are X and Y intuitive compared with the original XY pad?
+- Should `kInvertXKnob` or `kInvertYKnob` be flipped?
 - Does Audio/CV In 1 pitch scaling feel right?
 - Do CV1 and CV2 feel like faithful X/Y pad modulation inputs?
 - Does Pulse1 gating feel useful, or should it become a mode/chord trigger?
