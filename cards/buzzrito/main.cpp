@@ -33,8 +33,8 @@ private:
     uint32_t sub_phase_ = 0;
     uint32_t saw_delta_[kNumSaws] = {0};
     uint32_t sub_delta_ = 0;
-    int32_t saw_level_ = 0;
-    int32_t sub_level_ = 0;
+    int32_t saw_level_ = 2048;
+    int32_t sub_level_ = 1024;
     int32_t gate_q16_ = 65535;
     int32_t pitch_mv_ = 1000;
     int32_t gate_level_ = 65535;
@@ -148,9 +148,9 @@ private:
         l_samp += sub;
         r_samp += sub;
 
-        const int32_t gate_mul = (gate_q16_ * gate_q16_) >> 16;
-        l_samp = (l_samp * gate_mul) >> 16;
-        r_samp = (r_samp * gate_mul) >> 16;
+        const int32_t gate_mul = static_cast<int32_t>((static_cast<int64_t>(gate_q16_) * gate_q16_) >> 16);
+        l_samp = static_cast<int32_t>((static_cast<int64_t>(l_samp) * gate_mul) >> 16);
+        r_samp = static_cast<int32_t>((static_cast<int64_t>(r_samp) * gate_mul) >> 16);
 
         frame_[0] = clamp16(l_samp);
         frame_[1] = clamp16(r_samp);
