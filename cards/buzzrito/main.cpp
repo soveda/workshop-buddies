@@ -54,8 +54,8 @@ private:
         const int32_t y = KnobVal(Knob::Y);
 
         // Original Buzzrito drones at 1000 mV when no pitch jack is patched.
-        // Main now acts as a narrower tune offset around a lower test center.
-        int32_t pitch_mv = -500 + ((main * 3000) >> 12);
+        // Put that original base note near noon so Main has range below/above.
+        int32_t pitch_mv = -1500 + ((main * 5000) >> 12);
         if (Connected(Input::Audio1))
         {
             // Audio/CV In 1 is signed 12-bit and serves as Buzzrito pitch CV.

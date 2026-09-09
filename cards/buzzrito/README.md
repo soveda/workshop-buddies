@@ -28,8 +28,8 @@ physical knob feels backwards during testing.
 ## Current Test Behavior
 
 The current test UF2 is a stability diagnostic. It holds a stable virtual pad
-position from X/Y knobs plus patched CV1/CV2, uses a lower/narrower Main pitch
-range, and renders a bounded per-sample saw/sub swarm. It deliberately bypasses
+position from X/Y knobs plus patched CV1/CV2, puts the original Buzzrito base
+pitch near noon on Main, and renders a bounded per-sample saw/sub swarm. It deliberately bypasses
 the original saved motion, random wobble, noise, and comb sections while we
 verify that pitch, pad position, and the sub oscillator can stay parked.
 

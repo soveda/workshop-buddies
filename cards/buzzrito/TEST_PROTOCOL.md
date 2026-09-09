@@ -6,7 +6,7 @@
 - Clock: 192 MHz
 - Audio rate: 48 kHz via `ComputerCard::ProcessSample()`, one stereo frame per callback
 - Source mapping: Buddies Buzzrito preset map with Workshop Computer controls
-- Current diagnostic behavior: simplified saw/sub swarm renderer, lower/narrower Main range, no saved motion, no random wobble, no noise, no comb
+- Current diagnostic behavior: simplified saw/sub swarm renderer, original base pitch near noon on Main, no saved motion, no random wobble, no noise, no comb
 
 ## Control Map
 
@@ -54,7 +54,7 @@ Pass criteria:
 Expected behavior:
 
 - Main changes overall pitch/tune across a broad range.
-- The lowest Main settings should be clearly below the previous high-pitched build.
+- The original Buzzrito base note should sit near noon on Main, with audible range below it at lower settings.
 - X and Y reshape the Buzzrito swarm in clearly different ways.
 - No hard lockups, sudden silence, or harsh digital clipping during knob travel.
 - LED pairs should move in opposite brightness patterns as X and Y cross center.
