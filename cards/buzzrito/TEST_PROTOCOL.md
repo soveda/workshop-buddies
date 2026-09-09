@@ -4,7 +4,7 @@
 
 - UF2: `cards/buzzrito/uf2/workshop_buzzrito_0.1.0_test.uf2`
 - Clock: 192 MHz
-- Audio rate: 48 kHz via `ComputerCard::ProcessSample()`
+- Audio rate: 48 kHz via `ComputerCard::ProcessSample()`, with native 64-sample Buzzrito DSP blocks
 - Source mapping: Buddies Buzzrito DSP with Workshop Computer controls
 
 ## Control Map
@@ -101,6 +101,8 @@ Pass criteria:
 ## Notes To Capture
 
 - Does Main's range feel too wide, too narrow, or reversed?
+- Does this block-timed build sound like the expected saw swarm instead of broadband noise?
+- Is the sub oscillator audible in at least one X/Y region?
 - Are X and Y intuitive compared with the original XY pad?
 - Does Audio/CV In 1 pitch scaling feel right?
 - Do CV1 and CV2 feel like faithful X/Y pad modulation inputs?

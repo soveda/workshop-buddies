@@ -25,12 +25,13 @@ After the current test UF2 passes, add switch behavior:
 ## Notes
 
 The original Buzzrito firmware runs the RP2040 at 200 MHz, 48 kHz audio, and
-64-sample I2S blocks. This Workshop scaffold runs at 192 MHz and calls the
-ported DSP once per sample from `ComputerCard::ProcessSample()`.
+64-sample I2S blocks. This Workshop scaffold runs at 192 MHz, keeps the
+original 64-sample DSP block timing, and streams the rendered block one sample
+at a time from `ComputerCard::ProcessSample()`.
 
 This is a buildable starting point, not yet a profiled final card. The next DSP
-pass should measure `ProcessSample()` time and, if needed, refactor the
-block-oriented engine into a dedicated single-sample renderer.
+pass should measure the block render time and confirm it leaves enough headroom
+inside the Workshop Computer audio callback.
 
 ## Build
 

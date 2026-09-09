@@ -20,6 +20,26 @@ public:
 
     void __not_in_flash_func(ProcessSample)() override
     {
+        if (block_index_ == 0)
+        {
+            render_block();
+        }
+
+        AudioOut1(block_[block_index_ * 2 + 0] >> 4);
+        AudioOut2(block_[block_index_ * 2 + 1] >> 4);
+
+        block_index_ = (block_index_ + 1) & (BLOCK_SIZE - 1);
+    }
+
+private:
+    int16_t block_[BLOCK_SIZE * 2] = {0};
+    int32_t block_index_ = 0;
+    int32_t gate_level_ = 65535;
+    int32_t led_counter_ = 0;
+    int chord_mode_ = 1;
+
+    void __not_in_flash_func(render_block)()
+    {
         const int32_t main = KnobVal(Knob::Main);
         const int32_t x = KnobVal(Knob::X);
         const int32_t y = KnobVal(Knob::Y);
@@ -60,22 +80,13 @@ public:
             gate_level_ = 65535;
         }
 
-        int16_t frame[2] = {0, 0};
-        process_buzzrito_xy(frame, pitch_mv, gate_q16, pad_x, pad_y, chord_mode_);
-
-        AudioOut1(frame[0] >> 4);
-        AudioOut2(frame[1] >> 4);
+        process_buzzrito_xy(block_, pitch_mv, gate_q16, pad_x, pad_y, chord_mode_);
 
         PulseOut1(gate_q16 > 32768);
         CVOut1(clamp12(pitch_mv / 3));
 
         update_leds(pad_x, pad_y, gate_q16);
     }
-
-private:
-    int32_t gate_level_ = 65535;
-    int32_t led_counter_ = 0;
-    int chord_mode_ = 1;
 
     static int16_t clamp12(int32_t value)
     {
