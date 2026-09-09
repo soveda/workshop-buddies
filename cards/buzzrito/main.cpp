@@ -30,6 +30,7 @@ private:
     static constexpr int kNumSaws = 16;
     static constexpr bool kInvertXKnob = false;
     static constexpr bool kInvertYKnob = false;
+    static constexpr int32_t kSwitchHoldSamples = SAMPLE_FREQ / 4;
     int16_t frame_[2] = {0};
     uint32_t saw_phase_[kNumSaws] = {0};
     uint32_t sub_phase_ = 0;
@@ -43,6 +44,7 @@ private:
     int32_t led_counter_ = 0;
     int32_t pad_x_smooth_ = 0;
     int32_t pad_y_smooth_ = 0;
+    int32_t switch_down_samples_ = 0;
     int chord_mode_ = 1;
 
     void __not_in_flash_func(update_controls)()
@@ -78,8 +80,17 @@ private:
         pad_x_smooth_ += make_lpf_delta(pad_x, pad_x_smooth_, 4);
         pad_y_smooth_ += make_lpf_delta(pad_y, pad_y_smooth_, 4);
 
+        update_switch();
+
+        const bool pulse1_connected = Connected(Input::Pulse1);
+        const bool switch_held = switch_down_samples_ >= kSwitchHoldSamples;
         int32_t gate_q16 = 65535;
-        if (Connected(Input::Pulse1))
+        if (switch_held)
+        {
+            gate_q16 = pulse1_connected ? 65535 : 0;
+            gate_level_ = gate_q16;
+        }
+        else if (pulse1_connected)
         {
             const int32_t target = PulseIn1() ? 65535 : 0;
             gate_level_ += make_lpf_delta(target, gate_level_, 7);
@@ -105,19 +116,59 @@ private:
         update_leds(pad_x_smooth_, pad_y_smooth_, gate_q16);
     }
 
+    void __not_in_flash_func(update_switch)()
+    {
+        if (SwitchVal() == Switch::Down)
+        {
+            if (switch_down_samples_ < SAMPLE_FREQ)
+            {
+                switch_down_samples_++;
+            }
+            return;
+        }
+
+        if (switch_down_samples_ > 0 && switch_down_samples_ < kSwitchHoldSamples)
+        {
+            chord_mode_++;
+            if (chord_mode_ > 4)
+            {
+                chord_mode_ = 1;
+            }
+        }
+        switch_down_samples_ = 0;
+    }
+
     void __not_in_flash_func(update_pitch_deltas)(int32_t pitch_mv, int32_t spread)
     {
         const static int middle_c_offset_q19 = (int)(23.4806373824f * (1 << 19));
-        const int32_t base_octaves_q19 = (pitch_mv << 17) / 250;
-        const int32_t base_log_q19 = middle_c_offset_q19 + base_octaves_q19;
+        const int32_t base_log_q19 = pitch_to_log_q19(pitch_mv) + middle_c_offset_q19;
         sub_delta_ = exp2_table(base_log_q19 - (1 << 19));
 
         for (int i = 0; i < kNumSaws; ++i)
         {
+            const int32_t chord_pitch_mv = pitch_mv + chord_offset_mv(i);
+            const int32_t chord_log_q19 = middle_c_offset_q19 + pitch_to_log_q19(chord_pitch_mv);
             const int32_t detune = (i - (kNumSaws / 2)) * spread;
-            uint32_t target = exp2_table(base_log_q19 + detune);
+            uint32_t target = exp2_table(chord_log_q19 + detune);
             saw_delta_[i] += static_cast<int32_t>(target - saw_delta_[i]) >> 5;
         }
+    }
+
+    static int32_t pitch_to_log_q19(int32_t pitch_mv)
+    {
+        return (pitch_mv << 17) / 250;
+    }
+
+    int32_t chord_offset_mv(int32_t saw_index) const
+    {
+        static constexpr int32_t kOffsets[4][4] = {
+            {0, 0, 0, 0},
+            {0, 700, 0, 700},
+            {0, 700, 1200, 700},
+            {0, 400, 700, 1200},
+        };
+        const int32_t mode = clampi(chord_mode_, 1, 4);
+        return kOffsets[mode - 1][saw_index & 3];
     }
 
     void __not_in_flash_func(render_stable_swarm)()
@@ -191,7 +242,7 @@ private:
         LedBrightness(2, clampi(4095 - y_amt, 0, 4095));
         LedBrightness(3, clampi(y_amt, 0, 4095));
         LedBrightness(4, gate_q16 >> 4);
-        LedBrightness(5, 512 + ((pad_x + pad_y + 8192) >> 3));
+        LedBrightness(5, chord_mode_ * 1024);
     }
 };
 

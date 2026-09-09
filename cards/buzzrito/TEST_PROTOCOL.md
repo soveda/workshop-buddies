@@ -16,6 +16,8 @@
 - Audio/CV In 1: pitch modulation, roughly 3 mV per signed ADC count
 - CV1: virtual XY pad X modulation
 - CV2: virtual XY pad Y modulation
+- Switch down short press: bee tap / chord mode cycle
+- Switch down hold: opens the gate when Pulse1 is patched, closes the drone when Pulse1 is unpatched
 - Pulse1: gate input; unpatched means drone
 - Audio Out 1/2: stereo output
 - CV Out 1: pitch CV monitor
@@ -23,7 +25,7 @@
 - LEDs 0/1: X position/activity
 - LEDs 2/3: Y position/activity
 - LED 4: gate level
-- LED 5: combined X/Y activity
+- LED 5: chord mode indicator
 
 ## Flash Test
 
@@ -62,15 +64,31 @@ Expected behavior:
 1. Patch a slow gate or square LFO into Pulse1.
 2. Confirm audio opens and closes with the gate.
 3. Confirm Pulse Out 1 follows the gated state.
-4. Patch a slow bipolar CV into Audio/CV In 1.
-5. Sweep Main while Audio/CV In 1 is patched.
+4. Hold the switch down while Pulse1 is patched low.
+5. Unpatch Pulse1 and hold the switch down.
+6. Patch a slow bipolar CV into Audio/CV In 1.
+7. Sweep Main while Audio/CV In 1 is patched.
 
 Expected behavior:
 
 - Pulse1 gates the output with a short smoothing transition.
 - With Pulse1 unplugged, the firmware returns to drone behavior.
+- Holding the switch opens the gate when Pulse1 is patched.
+- Holding the switch closes/mutes the drone when Pulse1 is unpatched.
 - Audio/CV In 1 shifts pitch around the Main tune setting.
 - CV Out 1 follows the approximate pitch control and stays within the Workshop Computer output range.
+
+## Chord Mode
+
+1. Leave Pulse1 unpatched.
+2. Short-press the switch down and release.
+3. Repeat four times.
+
+Expected behavior:
+
+- Each short press cycles the bee/chord mode: 1, 2, 3, 4, then back to 1.
+- LED 5 steps through four brightness levels.
+- Chord modes 2-4 add interval stacks across the saw bank.
 
 ## X/Y CV Modulation
 
@@ -112,6 +130,7 @@ Pass criteria:
 - Does Audio/CV In 1 pitch scaling feel right?
 - Do CV1 and CV2 feel like faithful X/Y pad modulation inputs?
 - Does Pulse1 gating feel useful, or should it become a mode/chord trigger?
-- After this UF2 passes, add switch behavior: short press taps the original Buzzrito bee/chord mode, press-and-hold manually opens/closes gate depending on Pulse1 patching.
+- Does the switch short-press chord cycle feel like the original bee tap?
+- Does switch hold make sense as open-gate-with-Pulse1 and mute-drone-without-Pulse1?
 - Are the LED behaviors helpful enough for a card without artwork?
 - Any control ranges that should be curved, limited, or swapped before the next UF2.

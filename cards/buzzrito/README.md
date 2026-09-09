@@ -11,9 +11,12 @@ First-pass Workshop Computer port of the Buddies Buzzrito swarm oscillator.
 - CV1: virtual XY pad X modulation
 - CV2: virtual XY pad Y modulation
 - Pulse1: gate; unpatched means drone
+- Switch down short press: bee tap / chord mode cycle
+- Switch down hold: opens the gate when Pulse1 is patched, closes the drone when Pulse1 is unpatched
 - Audio Out 1/2: stereo Buzzrito output
 - CV Out 1: approximate pitch CV monitor
 - Pulse Out 1: gate monitor
+- LED 5: chord mode indicator
 
 ## Pad Axis Mapping
 
@@ -29,13 +32,6 @@ position from X/Y knobs plus patched CV1/CV2, uses a lower/narrower Main pitch
 range, and renders a bounded per-sample saw/sub swarm. It deliberately bypasses
 the original saved motion, random wobble, noise, and comb sections while we
 verify that pitch, pad position, and the sub oscillator can stay parked.
-
-## Staged Next Change
-
-After the current test UF2 passes, add switch behavior:
-
-- Short press: equivalent to tapping the bee on the original Buzzrito, for chord mode changes.
-- Press and hold: manual gate open/close behavior, coordinated with Pulse1 patch detection.
 
 ## Notes
 
