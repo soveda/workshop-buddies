@@ -2,7 +2,7 @@
 
 ## Artifact
 
-- UF2: `cards/buzzrito/uf2/workshop_buzzrito_0.1.0_test.uf2`
+- UF2: `cards/buzzrito/uf2/workshop_buzzrito_0.1.0.uf2`
 - Clock: 192 MHz
 - Audio rate: 48 kHz via `ComputerCard::ProcessSample()`, one stereo frame per callback
 - Source mapping: Buddies Buzzrito preset map with Workshop Computer controls
@@ -31,7 +31,7 @@
 ## Flash Test
 
 1. Put the Workshop Computer into BOOTSEL/UF2 mode.
-2. Copy `cards/buzzrito/uf2/workshop_buzzrito_0.1.0_test.uf2` to the mounted RP2040 drive.
+2. Copy `cards/buzzrito/uf2/workshop_buzzrito_0.1.0.uf2` to the mounted RP2040 drive.
 3. Let the board reboot.
 4. Patch Audio Out 1 and 2 to a mixer or scope at conservative gain.
 5. Leave Pulse1 unpatched for the first pass; the firmware should drone.
@@ -85,15 +85,19 @@ Expected behavior:
 
 ## Chord Mode
 
-1. Leave Pulse1 unpatched.
-2. Short-press the switch down and release.
-3. Repeat four times.
+1. Power-cycle the card at least five times and, after each boot, check that
+   LED 5 begins at the first chord-mode brightness level.
+2. Leave Pulse1 unpatched.
+3. Short-press the switch down and release.
+4. Repeat four times.
 
 Expected behavior:
 
 - Each short press cycles the bee/chord mode: 1, 2, 3, 4, then back to 1.
 - LED 5 steps through four brightness levels.
 - Chord modes 2-4 add interval stacks across the saw bank.
+- The startup workaround must result in chord mode 1 after every boot. Record
+  any unit that begins at a different mode.
 
 ## X/Y CV Modulation
 

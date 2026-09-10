@@ -1,6 +1,6 @@
 # Previous Firmware
 
-The active firmware is one level up as `workshop_buzzrito_0.1.0_test.uf2`.
+The active firmware is one level up as `workshop_buzzrito_0.1.0.uf2`.
 Each subdirectory here contains one earlier recovery image:
 
 - `pre_noise_baseline`: stable comb and deterministic micro-wobble, without saved motion.

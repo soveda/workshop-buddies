@@ -68,7 +68,7 @@ private:
     int32_t pad_x_smooth_ = 0;
     int32_t pad_y_smooth_ = 0;
     int32_t switch_down_samples_ = 0;
-    int chord_mode_ = 1;
+    int chord_mode_ = 4;
     MotionPoint motion_[kMotionMaxPoints] = {};
     int32_t motion_sample_counter_ = 0;
     int32_t motion_record_divider_ = 0;

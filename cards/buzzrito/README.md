@@ -12,6 +12,7 @@ First-pass Workshop Computer port of the Buddies Buzzrito swarm oscillator.
 - CV2: virtual XY pad Y modulation
 - Switch up: record a new virtual-pad path; return to Middle to play it
 - Pulse1: gate; unpatched means drone
+- Pulse2 rising edge: stop saved-motion playback and return to live X/Y
 - Switch down short press: bee tap / chord mode cycle
 - Switch down hold: opens the gate when Pulse1 is patched, closes the drone when Pulse1 is unpatched
 - Audio Out 1/2: stereo Buzzrito output
@@ -32,9 +33,9 @@ matches the intended sound direction. LEDs retain the physical Y orientation,
 so their top and bottom display is reversed relative to the virtual Y sound
 coordinate.
 
-## Current Test Behavior
+## Release Behavior
 
-The current UF2 is the hardware-passed Workshop Buzzrito port. It puts the
+The main UF2 is the hardware-passed Workshop Buzzrito port. It puts the
 original Buzzrito base pitch near noon on Main and renders a bounded
 per-sample saw/sub swarm with the original-style tuned comb section. At edge
 presets it limits sub level relative to the saw, because direct knobs otherwise
@@ -62,11 +63,18 @@ removed to retain the proven real-time execution behavior. This is a
 deliberate porting decision: do not reintroduce pink noise without a separate
 real-time execution-budget and audio-regression test.
 
-The active image is `uf2/workshop_buzzrito_0.1.0_test.uf2`. Older images live
-under `uf2/previous-versions/`: `pre_noise_baseline/` is the passed comb and
-micro-wobble baseline, `pre_wobble/` is the older no-wobble version, and
-`switch_up_motion_passed/` is the passed motion version with a matching source
-snapshot under `fallback/switch_up_motion_passed/`.
+The active image is `uf2/workshop_buzzrito_0.1.0.uf2`. The immediately prior
+Pulse 2-passed build is retained under `uf2/previous-versions/pulse2_live_takeover_passed/`
+with a matching source snapshot under `fallback/pulse2_live_takeover_passed/`.
+
+## Beta Startup Check
+
+This release starts `chord_mode_` at 4 as a workaround for a brief apparent
+Down-switch press observed during startup on the test Workshop Computer. Beta
+testers should power-cycle the card several times and verify that it begins in
+chord mode 1, indicated by LED 5's first brightness level. Report any unit
+that begins at mode 4 or another mode; the workaround may depend on switch
+settling behavior across Workshop Computer revisions.
 
 ## Notes
 
