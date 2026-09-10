@@ -45,12 +45,12 @@ Middle plays the path: closed gestures loop and open gestures ping-pong. Hold
 X/Y stationary while Up is selected, then return to Middle, to make a parked
 one-point recording and stop movement. The path is about 2.05 seconds at full
 length, sampled every 8 ms and interpolated/smoothed at 1 kHz. It is in RAM
-only and is cleared by power cycling. Flick Up and return to Middle in under
-100 ms to clear the path and restore live X/Y control.
+only and is cleared by power cycling. A rising edge on Pulse2 stops playback
+and restores live X/Y control without erasing the stored path.
 
 During playback, a patched CV1 bypasses recorded X while recorded Y continues;
 CV2 does the converse. With both CV inputs patched, the whole recorded path is
-bypassed by the live virtual-pad position. Pulse2 has no motion role.
+bypassed by the live virtual-pad position.
 
 The current wobble experiment is intentionally simpler than the original: a
 very small, deterministic per-saw sine detune. It has no shared pitch drift or

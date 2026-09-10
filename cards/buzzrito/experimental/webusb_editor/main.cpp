@@ -1,5 +1,7 @@
 #include "pico/stdlib.h"
 #include "hardware/clocks.h"
+#include "pico/multicore.h"
+#include "tusb.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -9,6 +11,7 @@
 #include "tanh_table.h"
 #include "sintab.h"
 #include "buzzrito_dsp.h"
+#include "usb_editor.h"
 
 class WorkshopBuzzrito : public ComputerCard
 {
@@ -24,6 +27,7 @@ public:
 
     void __not_in_flash_func(ProcessSample)() override
     {
+        process_usb_commands();
         update_controls();
         render_stable_swarm();
         AudioOut1(frame_[0] >> 4);
@@ -36,6 +40,7 @@ private:
     static constexpr bool kInvertYKnob = true;
     static constexpr int32_t kSwitchHoldSamples = SAMPLE_FREQ / 4;
     static constexpr int32_t kMotionControlPeriod = 48;
+    static constexpr int32_t kUsbControlPeriod = 48;
     static constexpr int32_t kMotionPointDivider = 8;
     static constexpr int32_t kMotionMaxPoints = 256;
     static constexpr int32_t kMotionPingPongThreshold = 1365;
@@ -71,6 +76,7 @@ private:
     int chord_mode_ = 1;
     MotionPoint motion_[kMotionMaxPoints] = {};
     int32_t motion_sample_counter_ = 0;
+    int32_t usb_command_counter_ = 0;
     int32_t motion_record_divider_ = 0;
     int32_t motion_play_substep_ = 0;
     int32_t motion_length_ = 0;
@@ -81,7 +87,44 @@ private:
     bool motion_playing_ = false;
     bool motion_pingpong_ = false;
     bool motion_play_reverse_ = false;
-    bool pulse2_high_ = false;
+    bool usb_pad_active_ = false;
+    int32_t usb_pad_x_ = 0;
+    int32_t usb_pad_y_ = 0;
+    int32_t usb_takeover_x_ = 0;
+    int32_t usb_takeover_y_ = 0;
+
+    void __not_in_flash_func(process_usb_commands)()
+    {
+        usb_command_counter_++;
+        if (usb_command_counter_ < kUsbControlPeriod)
+        {
+            return;
+        }
+        usb_command_counter_ = 0;
+
+        UsbEditorCommand command = {};
+        while (usb_editor_pop(command))
+        {
+            switch (command.type)
+            {
+            case UsbEditorCommandType::SetXY:
+                usb_pad_x_ = command.values[0];
+                usb_pad_y_ = command.values[1];
+                usb_takeover_x_ = pad_x_smooth_;
+                usb_takeover_y_ = pad_y_smooth_;
+                usb_pad_active_ = true;
+                break;
+            case UsbEditorCommandType::SetPreset:
+                std::memcpy(&bp.presets[command.index[0]], command.values, sizeof(buzzypreset));
+                break;
+            case UsbEditorCommandType::SetParameter:
+                reinterpret_cast<int16_t *>(&bp.presets[command.index[1]])[command.index[0]] = command.values[0];
+                reinterpret_cast<int16_t *>(&bp.presets[command.index[2]])[command.index[0]] = command.values[1];
+                reinterpret_cast<int16_t *>(&bp.presets[command.index[3]])[command.index[0]] = command.values[2];
+                break;
+            }
+        }
+    }
 
     void __not_in_flash_func(update_controls)()
     {
@@ -124,19 +167,12 @@ private:
         pad_x_smooth_ += make_lpf_delta(pad_x, pad_x_smooth_, 4);
         pad_y_smooth_ += make_lpf_delta(pad_y, pad_y_smooth_, 4);
 
-        const bool pulse2_high = Connected(Input::Pulse2) && PulseIn2();
-        const bool pulse2_rising = pulse2_high && !pulse2_high_;
-        pulse2_high_ = pulse2_high;
-        if (pulse2_rising && motion_playing_)
+        // Browser XY control takes over until the musician moves either
+        // physical pad control. A patched CV axis also returns to live use.
+        if (usb_pad_active_ && (cv1_connected || cv2_connected ||
+                                abs(pad_x_smooth_ - usb_takeover_x_) + abs(pad_y_smooth_ - usb_takeover_y_) > 256))
         {
-            // Pulse2 is an explicit return to live X/Y. Keep the recorded
-            // path in RAM; a subsequent Switch-Up recording replaces it.
-            motion_playing_ = false;
-            motion_play_position_ = 0;
-            motion_play_substep_ = 0;
-            motion_play_reverse_ = false;
-            motion_x_ = pad_x_smooth_;
-            motion_y_ = pad_y_smooth_;
+            usb_pad_active_ = false;
         }
 
         update_switch();
@@ -144,8 +180,8 @@ private:
         // A patched CV axis takes priority over its saved axis. This keeps an
         // external CV source immediately useful while the other axis can
         // continue playing the recorded path.
-        const int32_t sound_pad_x = (motion_playing_ && !cv1_connected) ? motion_x_ : pad_x_smooth_;
-        const int32_t sound_pad_y = (motion_playing_ && !cv2_connected) ? motion_y_ : pad_y_smooth_;
+        const int32_t sound_pad_x = usb_pad_active_ ? usb_pad_x_ : ((motion_playing_ && !cv1_connected) ? motion_x_ : pad_x_smooth_);
+        const int32_t sound_pad_y = usb_pad_active_ ? usb_pad_y_ : ((motion_playing_ && !cv2_connected) ? motion_y_ : pad_y_smooth_);
 
         const bool pulse1_connected = Connected(Input::Pulse1);
         const bool switch_held = switch_down_samples_ >= kSwitchHoldSamples;
@@ -504,9 +540,21 @@ private:
     }
 };
 
+static void core1_entry()
+{
+    tusb_init();
+    while (true)
+    {
+        tud_task();
+        usb_editor_service();
+        sleep_ms(5);
+    }
+}
+
 int main()
 {
     set_sys_clock_khz(192000, true);
+    multicore_launch_core1(core1_entry);
 
     WorkshopBuzzrito card;
     card.EnableNormalisationProbe();

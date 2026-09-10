@@ -20,6 +20,7 @@
 - Switch down short press: bee tap / chord mode cycle
 - Switch down hold: opens the gate when Pulse1 is patched, closes the drone when Pulse1 is unpatched
 - Pulse1: gate input; unpatched means drone
+- Pulse2 rising edge: stop saved-motion playback and restore live X/Y
 - Audio Out 1/2: stereo output
 - CV Out 1: pitch CV monitor
 - Pulse Out 1: gate monitor
@@ -116,14 +117,14 @@ Expected behavior:
 3. Record a stationary point by holding X/Y still in Up for at least 100 ms, then returning to Middle.
 4. During playback, patch CV1 and confirm live X/CV1 bypasses only saved X while saved Y continues.
 5. Repeat with CV2, then patch both inputs and confirm the complete saved path is bypassed.
-6. Confirm Pulse2 has no effect on motion.
-7. Flick Switch Up and return to Middle in under 100 ms. Confirm the saved path clears and X/Y are live again.
+6. Send a rising edge to Pulse2 during playback. Confirm the loop stops and
+   X/Y immediately return to live control.
 
 Expected behavior:
 
 - Switch Up replaces the prior path; it does not append to it.
 - A stationary recording provides the stop-motion gesture.
-- A quick Up flick clears saved motion and restores live X/Y control.
+- A Pulse2 rising edge stops playback without erasing the stored path.
 - The full-length recording is about 2.05 seconds, retained only in RAM until power off.
 - Motion playback remains smooth, stable, and phase-locked to the audio callback.
 
