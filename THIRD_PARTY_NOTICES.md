@@ -4,7 +4,7 @@
 
 This repository includes adapted software from:
 
-`/Users/adrianvos/coding/GitHub/buddies_public`
+[github.com/plinkysynth/buddies_public](https://github.com/plinkysynth/buddies_public)
 
 The Buddies software is licensed under the MIT License. Buddies logos, names,
 front-panel artwork, documentation graphics, and hardware designs have separate
@@ -22,7 +22,6 @@ The copied/adapted Buzzrito DSP files are:
 `cards/buzzrito/ComputerCard.h` and `cards/buzzrito/pico_sdk_import.cmake`
 come from the Music Thing Modular Workshop Computer repository:
 
-`/Users/adrianvos/coding/GitHub/Workshop_Computer/Demonstrations+HelloWorlds/PicoSDK/ComputerCard`
+[github.com/TomWhitwell/Workshop_Computer](https://github.com/TomWhitwell/Workshop_Computer/tree/main/Demonstrations%2BHelloWorlds/PicoSDK/ComputerCard)
 
 ComputerCard is MIT licensed.
-
