@@ -12,6 +12,8 @@
 #include "sintab.h"
 #include "buzzrito_dsp.h"
 
+static volatile bool usb_editor_mode = false;
+
 class WorkshopBuzzrito : public ComputerCard
 {
 public:
@@ -26,10 +28,27 @@ public:
 
     void __not_in_flash_func(ProcessSample)() override
     {
+        // Editor mode deliberately parks the renderer before TinyUSB begins.
+        // A normal boot never sets this flag, so its performance path is the
+        // same stable renderer as the non-USB firmware.
+        if (usb_editor_mode)
+        {
+            AudioOut1(0);
+            AudioOut2(0);
+            PulseOut1(false);
+            PulseOut2(false);
+            return;
+        }
         update_controls();
         render_stable_swarm();
         AudioOut1(frame_[0] >> 4);
         AudioOut2(frame_[1] >> 4);
+    }
+
+    static bool EditorBootRequested()
+    {
+        WorkshopBuzzrito *card = static_cast<WorkshopBuzzrito *>(ThisPtr());
+        return card != nullptr && card->SwitchVal() == Switch::Up;
     }
 
 private:
@@ -508,9 +527,21 @@ private:
 
 static void usb_midi_worker()
 {
-    // Match the working Cosmik/Fr330hfr33 device bootstrap: audio owns core
-    // 0, while core 1 brings USB up after the board's inputs have settled.
-    sleep_ms(100);
+    // USB is modal. Switch Up is latched, so holding it while powering the
+    // card is an unambiguous editor-mode request without changing normal
+    // Switch-Up gesture recording after boot.
+    sleep_ms(1000);
+    if (!WorkshopBuzzrito::EditorBootRequested())
+    {
+        // A busy idle loop still competes with the audio core for shared XIP
+        // bandwidth. Park core 1 in hardware for the entire normal boot.
+        while (true)
+        {
+            multicore_fifo_pop_blocking();
+        }
+    }
+
+    usb_editor_mode = true;
     tud_init(0);
     while (true)
     {
