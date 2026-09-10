@@ -63,9 +63,22 @@ removed to retain the proven real-time execution behavior. This is a
 deliberate porting decision: do not reintroduce pink noise without a separate
 real-time execution-budget and audio-regression test.
 
-The active image is `uf2/workshop_buzzrito_0.1.0.uf2`. The immediately prior
-Pulse 2-passed build is retained under `uf2/previous-versions/pulse2_live_takeover_passed/`
-with a matching source snapshot under `fallback/pulse2_live_takeover_passed/`.
+The standard source is `main.cpp`. The immediately prior Pulse 2-passed source
+snapshot is retained under `fallback/pulse2_live_takeover_passed/`.
+
+## WebUI Companion Experiment
+
+The modal WebUSB companion can be used with the original Buzzrito web app. It
+boots into the editor only when Switch is latched Up at power-on; normal boots
+remain USB-free and use the stable performance renderer. The editor and its
+persisted presets are documented in
+`experimental/webusb_modal_editor/README.md`.
+
+The WebUI can display and save all original preset fields, but the renderer
+currently locks `glide`, `boc_amount`, and `noise_level` to zero. Changing
+those controls in the WebUI is stored for future compatibility work but has no
+audible effect. The active audible fields are `spread`, `wobble_amount`,
+`wobble_speed`, `saw_level`, `sub_level`, `comb_depth`, and `comb_mul`.
 
 ## Beta Startup Check
 

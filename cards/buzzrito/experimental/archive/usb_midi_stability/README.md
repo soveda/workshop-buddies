@@ -43,5 +43,4 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j2
 ```
 
-The current stage-1I output is
-`uf2/workshop_buzzrito_usb_midi_stability_stage1i.uf2`.
+Generated firmware is intentionally not retained in Git.

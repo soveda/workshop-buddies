@@ -4,8 +4,14 @@
 
 `webusb_modal_editor/` is the passed experimental fallback. It provides stable
 normal performance, WebUSB editor boot with Switch Up, and saved preset data.
-Use its source and persistence UF2 as the starting point for every later sound
-parameter experiment.
+Use its source as the starting point for every later sound parameter experiment.
+
+`parameter_trials/glide/` is the current source-only glide test. Its timing
+notes establish the required 64-sample conversion for any later BOC or noise
+experiment.
+
+`PERFORMANCE_NOTES.md` records the real-time constraints for later USB, MIDI,
+BOC, and noise work.
 
 ## Archive
 

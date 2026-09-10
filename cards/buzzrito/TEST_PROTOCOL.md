@@ -1,8 +1,8 @@
 # Workshop Buzzrito Test Protocol
 
-## Artifact
+## Build
 
-- UF2: `cards/buzzrito/uf2/workshop_buzzrito_0.1.0.uf2`
+- Firmware is built locally and is not stored in Git.
 - Clock: 192 MHz
 - Audio rate: 48 kHz via `ComputerCard::ProcessSample()`, one stereo frame per callback
 - Source mapping: Buddies Buzzrito preset map with Workshop Computer controls
@@ -31,7 +31,8 @@
 ## Flash Test
 
 1. Put the Workshop Computer into BOOTSEL/UF2 mode.
-2. Copy `cards/buzzrito/uf2/workshop_buzzrito_0.1.0.uf2` to the mounted RP2040 drive.
+2. Build the source, then copy the locally generated `build/workshop_buzzrito.uf2`
+   to the mounted RP2040 drive.
 3. Let the board reboot.
 4. Patch Audio Out 1 and 2 to a mixer or scope at conservative gain.
 5. Leave Pulse1 unpatched for the first pass; the firmware should drone.

@@ -35,7 +35,10 @@ inputs; the browser's virtual XY position is editor-only. The stable Workshop
 renderer uses saved `spread`, `wobble_amount`, `wobble_speed`, `saw_level`,
 `sub_level`, `comb_depth`, and `comb_mul` values. It deliberately does not add
 the original pink-noise path, and keeps the original motion-generating behavior
-disabled for stable knob operation. A stored value can therefore be visible in
+disabled for stable knob operation. In the renderer, `glide`, `boc_amount`, and
+`noise_level` are locked to zero. The web app still displays and saves those
+three original fields, but changing them has no audible effect until a separate
+parameter experiment restores them. A stored value can therefore be visible in
 the app without producing the original firmware's exact audible result.
 
 ## Reset
@@ -47,9 +50,8 @@ the card's new stored presets.
 ## Build
 
 ```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j2
+cmake -S . -B /private/tmp/workshop-buzzrito-webusb -DCMAKE_BUILD_TYPE=Release
+cmake --build /private/tmp/workshop-buzzrito-webusb -j2
 ```
 
-The persistence test artifact is
-`uf2/workshop_buzzrito_webusb_modal_editor_persistence.uf2`.
+Generated firmware is intentionally not stored in Git.

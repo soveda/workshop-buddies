@@ -3,7 +3,8 @@
 **Passed:** WebUSB app connection, normal-performance isolation, and preset
 persistence across reboot.
 
-1. Flash `uf2/workshop_buzzrito_webusb_modal_editor_persistence.uf2`.
+1. Build this source locally and flash its generated UF2. Firmware artifacts
+   are intentionally not stored in Git.
 2. Boot with switch Middle. Confirm normal sound, Switch-Up gesture recording,
    playback, and Pulse2 live takeover remain indistinguishable from the stable
    non-USB firmware. No USB device should appear.

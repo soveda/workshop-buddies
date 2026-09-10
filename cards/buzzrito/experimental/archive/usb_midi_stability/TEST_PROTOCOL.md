@@ -1,6 +1,6 @@
 # Stage 1I Test Protocol: Parked Modal USB MIDI
 
-1. Flash `uf2/workshop_buzzrito_usb_midi_stability_stage1i.uf2`.
+1. Build this archived source locally and flash its generated UF2.
 2. Normal performance boot: leave the switch in Middle, power the card, and
    verify sound, knobs, Switch-Up gesture record/playback, and Pulse2 live
    takeover against `workshop_buzzrito_0.1.0.uf2`. No MIDI device should appear.
