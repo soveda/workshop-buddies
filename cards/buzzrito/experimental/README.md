@@ -10,6 +10,13 @@ Use its source as the starting point for every later sound parameter experiment.
 notes establish the required 64-sample conversion for any later BOC or noise
 experiment.
 
+`parameter_trials/boc/` is the separate, depth-limited BOC test branched from
+the hardware-passed glide version. It has passed hardware testing and is the
+starting point for any later isolated noise work.
+
+`parameter_trials/noise/` is the separate, depth-limited pink-noise test
+branched from the hardware-passed BOC version.
+
 `PERFORMANCE_NOTES.md` records the real-time constraints for later USB, MIDI,
 BOC, and noise work.
 

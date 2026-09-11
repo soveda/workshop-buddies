@@ -1,13 +1,13 @@
-# Buzzrito Glide Test
+# Buzzrito BOC Test
 
-This isolated test derives from the passed modal WebUSB fallback. It adds only
-the original `glide` parameter; the fallback source remains unchanged.
+This isolated test derives from the hardware-passed glide version. It adds only
+the original `boc_amount` path; the glide version remains unchanged.
 
-**Hardware passed:** glide produces a clean pitch transition, reaches the
-expected final pitch, and preserves the stable oscillator, motion, gate, LED,
-and WebUSB-editor behavior.
+**Hardware passed:** `boc_amount = 0` retains the glide baseline, restrained
+BOC movement is stable at the trial's capped maximum, and motion, Pulse2, gate,
+LED, and WebUSB-editor behavior remain intact.
 
-The original Buzzrito web app can edit and store `glide` values in this build.
+The original Buzzrito web app can edit and store `boc_amount` values in this build.
 It retains the existing vendor endpoint, VID family, and `0x0b47` packet
 format.
 
@@ -27,23 +27,28 @@ sector, then reboots into normal performance mode.
 Keeping editor mode separate is deliberate: it prevents USB traffic and flash
 writes from disturbing audio or gesture playback.
 
-## Glide Behaviour
+## BOC Behaviour
 
-`glide` is calculated at the original 64-sample rate, then its pitch increment
-is applied per audio sample. Low source values move rapidly; high values move
-more slowly, matching the original parameter curve. A held pitch has the same
-final frequency as the fallback; only changes in pitch take longer to reach it.
+The original BOC interpolation-noise generator advances at its original
+64-sample cadence: 750 updates per second, not once on every 48 kHz
+`ProcessSample()` callback. Its value is held between updates. The shared BOC
+drift reaches the sub and comb pitch paths at full depth and the saws at half
+depth, as in the original firmware.
+
+This first trial limits `boc_amount` to one eighth of its original range. It
+should provide restrained shared pitch movement without fast modulation or
+unstable oscillator behavior.
 
 ## Audible Parameters
 
 Normal performance always takes X and Y from the physical knobs or their CV
 inputs; the browser's virtual XY position is editor-only. The stable Workshop
-renderer uses saved `spread`, `glide`, `wobble_amount`, `wobble_speed`,
+renderer uses saved `spread`, `glide`, `boc_amount`, `wobble_amount`, `wobble_speed`,
 `saw_level`, `sub_level`, `comb_depth`, and `comb_mul` values. It deliberately
 does not add the original pink-noise path, and keeps the original
 motion-generating behavior disabled for stable knob operation. In the renderer,
-`boc_amount` and `noise_level` are locked to zero. The web app still displays
-and saves those two original fields, but changing them has no audible effect.
+`noise_level` is locked to zero. The web app still displays and saves that
+field, but changing it has no audible effect.
 
 ## Reset
 
@@ -54,8 +59,8 @@ the card's new stored presets.
 ## Build
 
 ```sh
-cmake -S . -B /private/tmp/workshop-buzzrito-glide -DCMAKE_BUILD_TYPE=Release
-cmake --build /private/tmp/workshop-buzzrito-glide -j2
+cmake -S . -B /private/tmp/workshop-buzzrito-boc -DCMAKE_BUILD_TYPE=Release
+cmake --build /private/tmp/workshop-buzzrito-boc -j2
 ```
 
 The generated test UF2 is intentionally not stored in Git. It is written to

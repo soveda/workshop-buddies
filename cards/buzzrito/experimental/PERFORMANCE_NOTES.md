@@ -4,6 +4,10 @@ Apply these rules to later BOC, noise, WebUSB, and MIDI experiments without
 changing the passed normal-performance renderer until each change is hardware
 tested.
 
+The 64-sample glide trial has passed hardware testing. Its source is a stable
+starting point for the BOC trial, which has also passed hardware testing. The
+BOC source is the stable starting point for any later isolated noise experiment.
+
 - Avoid division, dynamic allocation, logging, and flash writes in the 48 kHz
   audio callback. Precompute coefficients at a control rate or use fixed-point
   shifts and lookup tables.

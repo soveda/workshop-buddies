@@ -3,6 +3,8 @@
 The modal WebUSB path is inherited from the passed fallback. This protocol
 tests only the restored `glide` parameter.
 
+**Result: passed.**
+
 1. Flash the locally generated `cards/buzzrito/test-artifacts/workshop_buzzrito_glide_test.uf2`.
 2. Boot with switch Middle. Confirm normal sound, Switch-Up gesture recording,
    playback, and Pulse2 live takeover remain indistinguishable from the stable
