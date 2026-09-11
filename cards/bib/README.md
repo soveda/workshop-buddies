@@ -18,6 +18,11 @@ The card uses the bundled `ComputerCard.h` **v0.3.0** (12 May 2026).
 - LEDs 2–5: persistent level indicators for drive, delay feedback, reverb
   decay, and wet mix respectively
 
+When you change Main page, X and Y use **pot pickup**. A control does not
+change its newly selected parameter until the physical pot reaches that
+parameter's saved position. This prevents abrupt sound changes when moving
+between pages.
+
 ## Modes
 
 - Mode 0 (Main fully counter-clockwise): X = drive; Y = delay send; Z tap

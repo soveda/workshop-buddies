@@ -36,6 +36,48 @@ static inline int32_t ClampAudio(int32_t value)
 }
 
 static inline int32_t Abs(int32_t value) { return value < 0 ? -value : value; }
+
+// Each page remembers its two parameter positions.  When a page is entered,
+// its controls wait until the physical pot reaches the saved position before
+// taking over.  This is the same "pickup" behaviour as the original Bib's
+// catch-up LEDs, translated to a panel with only six LEDs.
+class PagePickup
+{
+public:
+    void Select(uint8_t page)
+    {
+        if (page == selected_) return;
+        selected_ = page;
+        caught_[0] = false;
+        caught_[1] = false;
+    }
+
+    int32_t Update(uint8_t control, int32_t raw)
+    {
+        int32_t &saved = values_[selected_][control];
+        if (!caught_[control]) {
+            constexpr int32_t kCatchWindow = 64;
+            if (raw >= saved - kCatchWindow && raw <= saved + kCatchWindow) {
+                caught_[control] = true;
+            } else {
+                return saved;
+            }
+        }
+        saved = raw;
+        return saved;
+    }
+
+private:
+    // Defaults match the sound heard immediately after boot.
+    int32_t values_[4][2] = {
+        {2048, 2048}, // drive, delay send
+        {2022, 2560}, // delay time, feedback
+        {1500, 1966}, // reverb send, decay
+        {2048, 2731}, // mix, output level
+    };
+    uint8_t selected_ = 255;
+    bool caught_[2] = {false, false};
+};
 } // namespace
 
 class Bib : public ComputerCard
@@ -49,8 +91,9 @@ public:
         // regions.  The LEDs show the selected region continuously.
         const int32_t main = KnobVal(Knob::Main);
         const uint8_t mode = static_cast<uint8_t>((main * 4) >> 12);
-        const int32_t x = KnobVal(Knob::X);
-        const int32_t y = KnobVal(Knob::Y);
+        pickup_.Select(mode);
+        const int32_t x = pickup_.Update(0, KnobVal(Knob::X));
+        const int32_t y = pickup_.Update(1, KnobVal(Knob::Y));
         const bool pressed = SwitchVal() == Switch::Down;
 
         UpdateControls(mode, x, y, pressed);
@@ -109,6 +152,7 @@ private:
     uint16_t combAPos_ = 0;
     uint16_t combBPos_ = 0;
     uint16_t diffuserPos_ = 0;
+    PagePickup pickup_;
 
     void UpdateControls(uint8_t mode, int32_t x, int32_t y, bool pressed)
     {
