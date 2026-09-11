@@ -1,13 +1,16 @@
-# Buzzrito Noise Test
+# Buzzrito Original Chord Note-Capture Trial
 
-This isolated test derives from the hardware-passed BOC version. It adds only
-the original `noise_level` audio mix; the BOC version remains unchanged.
+This isolated test derives from the calibrated pitch-CV version. It replaces
+the Workshop-only fixed interval chord table with the original Buzzrito
+note-memory behavior.
 
-**Hardware passed:** zero noise preserves the BOC baseline, the capped noise
-mix is stable, and oscillator pitch, X/Y, motion, Pulse2, gate, LEDs, and the
-WebUSB editor remain intact.
+The original chord modes are not fixed chord qualities. Modes 1-4 set the
+number of stable input pitches that can be retained. The saws then cycle
+through those retained notes. This implementation has passed hardware testing
+and was judged musical across the chord modes.
 
-The original Buzzrito web app can edit and store `noise_level` values in this build.
+The original Buzzrito web app can edit and store `wobble_amount` and
+`wobble_speed` values in this build.
 It retains the existing vendor endpoint, VID family, and `0x0b47` packet
 format.
 
@@ -27,15 +30,18 @@ sector, then reboots into normal performance mode.
 Keeping editor mode separate is deliberate: it prevents USB traffic and flash
 writes from disturbing audio or gesture playback.
 
-## Noise Behaviour
+## Chord Note Capture
 
-Pink noise is generated at the original 48 kHz audio rate, independently for
-left and right channels. It is mixed before DC cleanup and the comb path, as in
-the original firmware. It never advances BOC state or oscillator pitch.
+Set the desired chord mode with short Switch-Down presses. With mode 2, 3, or
+4 selected, set a first pitch and let it settle briefly, move Main or pitch CV
+to a second pitch and let it settle, then repeat for further notes. The card
+retains the most recent 2, 3, or 4 notes and distributes the saws across them.
+Mode 1 immediately returns to a single live pitch.
 
-This first trial limits `noise_level` to one sixteenth of its original mix
-range. At zero, the audio-noise path is completely bypassed, preserving the
-hardware-passed BOC baseline.
+The detector matches the original: it samples pitch once per 64 audio samples,
+requires a 16-sample history stable within 30 mV, and accepts a new note only
+when it differs by more than 30 mV. The passed calibrated 1 V/oct path and all
+other behavior are unchanged.
 
 ## Audible Parameters
 
@@ -43,7 +49,7 @@ Normal performance always takes X and Y from the physical knobs or their CV
 inputs; the browser's virtual XY position is editor-only. The stable Workshop
 renderer uses saved `spread`, `glide`, `boc_amount`, `wobble_amount`, `wobble_speed`,
 `saw_level`, `sub_level`, `noise_level`, `comb_depth`, and `comb_mul` values. It deliberately
-adds a depth-limited original pink-noise path, and keeps the original
+adds the passed quarter-depth pink-noise path, and keeps the original
 motion-generating behavior disabled for stable knob operation.
 
 ## Reset
@@ -55,8 +61,8 @@ the card's new stored presets.
 ## Build
 
 ```sh
-cmake -S . -B /private/tmp/workshop-buzzrito-noise -DCMAKE_BUILD_TYPE=Release
-cmake --build /private/tmp/workshop-buzzrito-noise -j2
+cmake -S . -B /private/tmp/workshop-buzzrito-chord-capture -DCMAKE_BUILD_TYPE=Release
+cmake --build /private/tmp/workshop-buzzrito-chord-capture -j2
 ```
 
 The generated test UF2 is intentionally not stored in Git. It is written to

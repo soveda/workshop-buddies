@@ -1,13 +1,13 @@
-# Buzzrito Noise Test Protocol
+# Buzzrito Eighth-Depth Noise Test Protocol
 
-The modal WebUSB, glide, and BOC paths are inherited from passed versions. This
-protocol tests only the restored, depth-limited `noise_level` parameter.
+The modal WebUSB, glide, BOC, and noise paths are inherited from passed
+versions. This protocol tests only the preferred `noise_level` cap.
 
 ## Test
 
-**Result: passed.**
+**Result: too subtle at maximum.** Retained for calibration reference.
 
-1. Flash the locally generated `cards/buzzrito/test-artifacts/workshop_buzzrito_noise_test.uf2`.
+1. Flash `cards/buzzrito/test-artifacts/workshop_buzzrito_noise_eighth_depth_test.uf2`.
 2. Boot with switch Middle. Confirm normal sound, Switch-Up gesture recording,
    playback, and Pulse2 live takeover remain indistinguishable from the stable
    non-USB firmware. No USB device should appear.
@@ -17,13 +17,14 @@ protocol tests only the restored, depth-limited `noise_level` parameter.
    `Workshop Buzzrito WebUSB` vendor device and read the seven presets.
 5. With a steady Main/X/Y position, set one preset's `noise_level` to zero,
    save with a one-second Switch-Down hold, and reboot to Middle. Confirm the
-   held tone matches the passed BOC version.
+   held tone matches the passed full-depth BOC version.
 6. Re-enter editor mode, set that same preset's `noise_level` to maximum,
-   save, and reboot to Middle. With controls stationary, listen for a subtle
-   stereo pink-noise texture.
-7. Return `noise_level` to zero and confirm the texture disappears completely.
-   Check for no rapid windstorm modulation, pitch change, clicking, fizz,
-   stutter, or change to the static X/Y sound position at either setting.
+   save, and reboot to Middle. With controls stationary, compare it to the
+   passed one-sixteenth noise test: it should be twice as pronounced, but less
+   forceful than the stable quarter-depth calibration.
+7. Check for no pitch movement, rapid windstorm modulation, clicking, fizz,
+   stutter, unstable oscillator behavior, or change to the static X/Y sound
+   position. Confirm full-depth BOC remains available.
 8. Confirm Switch-Up gesture recording/playback, Pulse2 live takeover, gate,
    LEDs, and normal WebUSB editor entry still behave as in the passed fallback.
 9. Re-enter editor mode and confirm the edited `noise_level` value remains visible.

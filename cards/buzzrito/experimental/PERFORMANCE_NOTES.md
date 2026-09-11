@@ -6,7 +6,8 @@ tested.
 
 The 64-sample glide trial has passed hardware testing. Its source is a stable
 starting point for the BOC trial, which has also passed hardware testing. The
-BOC source is the stable starting point for any later isolated noise experiment.
+BOC source was the stable starting point for the noise experiment, which has
+also passed hardware testing.
 
 - Avoid division, dynamic allocation, logging, and flash writes in the 48 kHz
   audio callback. Precompute coefficients at a control rate or use fixed-point

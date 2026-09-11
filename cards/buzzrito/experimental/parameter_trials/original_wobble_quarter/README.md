@@ -1,13 +1,14 @@
-# Buzzrito Noise Test
+# Buzzrito Original Wobble Trial
 
-This isolated test derives from the hardware-passed BOC version. It adds only
-the original `noise_level` audio mix; the BOC version remains unchanged.
+This isolated test derives from the selected quarter-depth noise and full-depth
+BOC version. It replaces only the simplified sine wobble with the original
+per-saw interpolation-noise wobble algorithm.
 
-**Hardware passed:** zero noise preserves the BOC baseline, the capped noise
-mix is stable, and oscillator pitch, X/Y, motion, Pulse2, gate, LEDs, and the
-WebUSB editor remain intact.
+The inherited glide, full-depth BOC, and quarter-depth noise behavior has
+passed hardware testing. This original-wobble trial requires testing.
 
-The original Buzzrito web app can edit and store `noise_level` values in this build.
+The original Buzzrito web app can edit and store `wobble_amount` and
+`wobble_speed` values in this build.
 It retains the existing vendor endpoint, VID family, and `0x0b47` packet
 format.
 
@@ -27,15 +28,16 @@ sector, then reboots into normal performance mode.
 Keeping editor mode separate is deliberate: it prevents USB traffic and flash
 writes from disturbing audio or gesture playback.
 
-## Noise Behaviour
+## Original Wobble Trial
 
-Pink noise is generated at the original 48 kHz audio rate, independently for
-left and right channels. It is mixed before DC cleanup and the comb path, as in
-the original firmware. It never advances BOC state or oscillator pitch.
+Each of the 16 saws has the original independent seeded pink/interpolation
+state. Its state advances at the original 64-sample cadence, 750 times per
+second, with the original unscaled `wobble_speed`. The deterministic sine
+wobble is absent in this branch.
 
-This first trial limits `noise_level` to one sixteenth of its original mix
-range. At zero, the audio-noise path is completely bypassed, preserving the
-hardware-passed BOC baseline.
+This first trial caps `wobble_amount` at one quarter of the original range. At
+`wobble_amount = 0`, it preserves the passed full-depth BOC and quarter-noise
+baseline.
 
 ## Audible Parameters
 
@@ -43,7 +45,7 @@ Normal performance always takes X and Y from the physical knobs or their CV
 inputs; the browser's virtual XY position is editor-only. The stable Workshop
 renderer uses saved `spread`, `glide`, `boc_amount`, `wobble_amount`, `wobble_speed`,
 `saw_level`, `sub_level`, `noise_level`, `comb_depth`, and `comb_mul` values. It deliberately
-adds a depth-limited original pink-noise path, and keeps the original
+adds the passed quarter-depth pink-noise path, and keeps the original
 motion-generating behavior disabled for stable knob operation.
 
 ## Reset
@@ -55,8 +57,8 @@ the card's new stored presets.
 ## Build
 
 ```sh
-cmake -S . -B /private/tmp/workshop-buzzrito-noise -DCMAKE_BUILD_TYPE=Release
-cmake --build /private/tmp/workshop-buzzrito-noise -j2
+cmake -S . -B /private/tmp/workshop-buzzrito-original-wobble -DCMAKE_BUILD_TYPE=Release
+cmake --build /private/tmp/workshop-buzzrito-original-wobble -j2
 ```
 
 The generated test UF2 is intentionally not stored in Git. It is written to
