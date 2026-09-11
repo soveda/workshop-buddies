@@ -1,124 +1,125 @@
 draft: false
-Name: Workshop Buzzrito
-short-description: Stereo saw and sub swarm oscillator with recordable XY motion.
-summary: |
-  A Workshop Computer port of Buddies Buzzrito: a stereo saw/sub swarm with a
-  virtual XY pad, tuned comb character, chord modes, and a recordable motion
-  path. Record X/Y movement with the switch Up; return to Middle to loop or
-  ping-pong the path. A stationary recording parks the sound.
-Language: C++ (ComputerCard)
+Name: BuzzyBee
+short-description: Hardware-tested Buzzrito saw and sub swarm with virtual XY motion and note-memory chords.
+summary: >-
+  A Workshop Computer adaptation of the Buddies Buzzrito stereo swarm oscillator.
+  BuzzyBee combines a virtual XY pad, recordable motion, original-style comb,
+  glide, BOC, wobble, pink noise, calibrated pitch CV, and musical note-memory
+  chord modes.
+Language: C++ (Pico SDK / ComputerCard)
 Creator: Adrian Vos
-Version: "0.1.0"
+Version: "1.0.0"
 Status: Beta - hardware-tested
 License: MIT
 date-created: 2026-09-09
-date-updated: 2026-09-10
+date-updated: 2026-09-11
 repository: https://github.com/soveda/workshop-buddies
 tags:
   - synthesizer
   - oscillator
   - drone
-  - cv
   - stereo
-
-uf2:
-  - path: uf2/workshop_buzzrito_0.1.0.uf2
-    name: Workshop Buzzrito 0.1.0
-
+  - cv
+  - webusb
+contact:
+  social:
+    github: https://github.com/soveda
 panel:
   inputs:
     - id: AudioIn1
       name: Pitch CV
-      description: Bipolar pitch modulation added to Main tune.
       type: cv
+      description: Calibrated 1 V/oct pitch input added to Main tune.
     - id: CVIn1
       name: X CV
-      description: Modulates virtual-pad X; during motion playback, patched X CV bypasses saved X.
       type: cv
+      description: Modulates virtual-pad X and overrides saved X motion while patched.
     - id: CVIn2
       name: Y CV
-      description: Modulates virtual-pad Y; during motion playback, patched Y CV bypasses saved Y.
       type: cv
+      description: Modulates virtual-pad Y and overrides saved Y motion while patched.
     - id: PulseIn1
       name: Gate In
+      type: pulse
       description: Gates the oscillator; leave unpatched for drone operation.
-      type: pulse
     - id: PulseIn2
-      name: Live XY In
-      description: A rising edge stops saved-motion playback and returns to live X/Y control.
+      name: Live XY
       type: pulse
+      description: A rising edge stops motion playback and restores live X/Y.
   outputs:
     - id: AudioOut1
       name: Stereo Left
-      description: Left saw/sub swarm output.
       type: audio
+      description: Left saw/sub swarm output.
     - id: AudioOut2
       name: Stereo Right
-      description: Right saw/sub swarm output.
       type: audio
+      description: Right saw/sub swarm output.
     - id: CVOut1
       name: Pitch Monitor
-      description: Approximate pitch control-voltage monitor.
       type: cv
+      description: Approximate pitch control-voltage monitor.
+    - id: CVOut2
+      name: Unused
+      type: cv
+      description: Unused in this firmware.
     - id: PulseOut1
       name: Gate Monitor
-      description: High while the audio gate is open.
       type: pulse
-
+      description: High while the audio gate is open.
+    - id: PulseOut2
+      name: Unused
+      type: pulse
+      description: Unused in this firmware.
 controls:
   switch:
     up:
       name: Record XY Motion
-      description: Hold for at least 100 ms to replace the prior X/Y path. Move X/Y to record motion, or leave them still to record a parked point.
+      description: After a normal boot, latch Up to record X/Y; return to Middle to play the new path.
     middle:
-      name: Play XY Motion
-      description: Plays the saved path; closed gestures loop and open gestures ping-pong. Without a recording, X/Y remain live.
+      name: Performance / Motion Playback
+      description: Plays the saved path or provides live X/Y when no path is playing.
     down:
       name: Gate Override
       description: Hold to force the gate open with Pulse In 1 patched, or mute the unpatched drone.
     tap:
       name: Chord Mode
-      description: Briefly press and release Down to cycle the four Buzzrito chord modes.
+      description: Briefly press and release Down to cycle the 1-4 note-memory chord modes.
   knobs:
     - main:
         name: Tune
-        description: Overall pitch; the original Buzzrito base note is near noon.
+        description: Overall pitch; Audio/CV In 1 adds calibrated 1 V/oct pitch.
       x:
         name: Virtual Pad X
-        description: Horizontal sound position, recorded while the switch is Up.
+        description: Horizontal virtual-pad position and recorded-motion axis.
       y:
         name: Virtual Pad Y
-        description: Vertical sound position, recorded while the switch is Up.
+        description: Vertical virtual-pad position and recorded-motion axis.
   leds:
     - display: list
       items:
         - id: LED0
           name: Virtual Pad Top Left
-          description: Brightness reflects the virtual pad's top-left corner weight.
+          description: Top-left virtual-pad weight.
         - id: LED1
           name: Virtual Pad Top Right
-          description: Brightness reflects the virtual pad's top-right corner weight.
+          description: Top-right virtual-pad weight.
         - id: LED2
           name: Virtual Pad Bottom Left
-          description: Brightness reflects the virtual pad's bottom-left corner weight.
+          description: Bottom-left virtual-pad weight.
         - id: LED3
           name: Virtual Pad Bottom Right
-          description: Brightness reflects the virtual pad's bottom-right corner weight.
+          description: Bottom-right virtual-pad weight.
         - id: LED4
           name: Gate Level
-          description: Brightness follows the audio gate level.
+          description: Audio gate level.
         - id: LED5
           name: Chord Mode / Record
-          description: Indicates chord mode in Middle; full brightness while recording motion.
-
+          description: Chord-mode brightness, or full brightness while recording.
 host:
-  notes: >
-    Motion is stored in RAM only and is cleared on power cycling. A full path
-    is about 2.05 seconds. With both X and Y CV inputs patched during playback,
-    the saved motion is fully bypassed by the live virtual-pad position. Pulse2
-    rising edges stop motion playback and return X/Y to live control. Beta
-    testers should verify after power cycling that chord mode begins at mode 1.
-
-contact:
-  social:
-    github: https://github.com/soveda
+  notes: >-
+    Booting or resetting with the latched switch Up enters muted WebUSB editor
+    mode for the [Buzzrito manual and web editor](https://plinkysynth.com/docs/buzzrito-manual/).
+    Save edited presets by moving the
+    switch Down and holding for one second; power-cycle with the switch Middle
+    for normal performance. Motion is held in RAM and clears on power cycling.

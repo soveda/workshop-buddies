@@ -1,112 +1,79 @@
 # Workshop Buzzrito
 
-First-pass Workshop Computer port of the Buddies Buzzrito swarm oscillator.
+Workshop Buzzrito is a hardware-tested Workshop Computer adaptation of the
+Buddies Buzzrito stereo saw and sub swarm oscillator. It retains Buzzrito's
+seven-point XY preset interpolation, comb character, glide, BOC, seeded
+wobble, calibrated pitch input, note-memory chords, and recordable XY motion.
 
-## Controls
+## Performance
 
-- Main: overall tune / pitch offset
-- X: virtual XY pad X
-- Y: virtual XY pad Y
-- Audio/CV In 1: pitch modulation
-- CV1: virtual XY pad X modulation
-- CV2: virtual XY pad Y modulation
-- Switch up: record a new virtual-pad path; return to Middle to play it
-- Pulse1: gate; unpatched means drone
-- Pulse2 rising edge: stop saved-motion playback and return to live X/Y
-- Switch down short press: bee tap / chord mode cycle
-- Switch down hold: opens the gate when Pulse1 is patched, closes the drone when Pulse1 is unpatched
-- Audio Out 1/2: stereo Buzzrito output
-- CV Out 1: approximate pitch CV monitor
-- Pulse Out 1: gate monitor
-- LEDs 0-3: virtual pad corners, ordered top-left, top-right, bottom-left, bottom-right
-- LED 4: gate level
-- LED 5: chord mode indicator, full brightness while recording
+| Control | Function |
+| --- | --- |
+| Main | Overall tune. The original Buzzrito base pitch is near noon. |
+| X / Y | Virtual XY-pad position. Y is inverted so clockwise follows the intended sound direction. |
+| Audio/CV In 1 | 1 V/oct pitch input, added to Main. |
+| CV In 1 / 2 | X / Y virtual-pad CV. A patched axis overrides that saved-motion axis. |
+| Pulse In 1 | Gate input. Leave unpatched for drone operation. |
+| Pulse In 2 | Rising edge stops motion playback and returns to live X/Y. |
+| Switch Up | Latches XY recording after a normal performance boot. Return to Middle to play it. |
+| Switch Middle | Plays the saved path, or gives live X/Y when no path is playing. |
+| Switch Down tap | Cycles chord modes 1-4. |
+| Switch Down hold | With Pulse In 1 patched, forces the gate open; otherwise mutes the drone. |
 
-## Pad Axis Mapping
+Switch Up records a fresh path, replacing the old one. A closed gesture loops;
+an open gesture ping-pongs. Leaving X/Y stationary records a parked point.
+Motion is stored in RAM, lasts about 2.05 seconds at full length, and clears
+on power cycling.
 
-The original Buzzrito pad reports a two-dimensional position, not knob travel.
-Workshop X/Y readings are converted into that pad coordinate space in
-`main.cpp`. The square knob/CV range is tapered to the original pad's usable
-edge geometry, so both controls continue to morph the sound near their ends.
-The current hardware mapping uses normal X and inverted Y, so clockwise Y
-matches the intended sound direction. LEDs retain the physical Y orientation,
-so their top and bottom display is reversed relative to the virtual Y sound
-coordinate.
+Chord modes are original Buzzrito note memory rather than fixed chord shapes.
+In modes 2-4, hold successive pitches briefly using Main or pitch CV. The card
+retains the most recent 2, 3, or 4 stable notes and distributes its saws across
+them. Mode 1 immediately returns to a single live pitch.
 
-## Release Behavior
+## LEDs And Outputs
 
-The main UF2 is the hardware-passed Workshop Buzzrito port. It puts the
-original Buzzrito base pitch near noon on Main and renders a bounded
-per-sample saw/sub swarm with the original-style tuned comb section. At edge
-presets it limits sub level relative to the saw, because direct knobs otherwise
-make the original sub-only zones too broad.
+LEDs 0-3 show the virtual pad's top-left, top-right, bottom-left, and
+bottom-right weights. LED 4 follows gate level. LED 5 shows chord mode and is
+full brightness while recording.
 
-Switch Up records a new X/Y path, replacing the previous one. Returning to
-Middle plays the path: closed gestures loop and open gestures ping-pong. Hold
-X/Y stationary while Up is selected, then return to Middle, to make a parked
-one-point recording and stop movement. The path is about 2.05 seconds at full
-length, sampled every 8 ms and interpolated/smoothed at 1 kHz. It is in RAM
-only and is cleared by power cycling. A rising edge on Pulse2 stops playback
-and restores live X/Y control without erasing the stored path.
+Audio Outs 1 and 2 are the stereo swarm. CV Out 1 is an approximate pitch
+monitor and Pulse Out 1 follows the audio gate. CV Out 2 and Pulse Out 2 are
+unused.
 
-During playback, a patched CV1 bypasses recorded X while recorded Y continues;
-CV2 does the converse. With both CV inputs patched, the whole recorded path is
-bypassed by the live virtual-pad position.
+## WebUSB Editor
 
-The current wobble experiment is intentionally simpler than the original: a
-very small, deterministic per-saw sine detune. It has no shared pitch drift or
-XY movement. The original no-wobble build remains available as the fallback.
+Boot or reset with the latched switch Up to enter the muted `Workshop Buzzrito
+WebUSB` editor mode. The [Buzzrito manual and web editor](https://plinkysynth.com/docs/buzzrito-manual/)
+can read and edit the seven presets. To save edited presets, move the switch Down and hold for one second;
+the card writes a CRC-checked record to flash and reboots. Power-cycle with the
+switch Middle for normal performance.
 
-Pink noise is not rendered in the current test build. The bundled source
-presets all specify zero `noise_level`, and the inactive noise path was
-removed to retain the proven real-time execution behavior. This is a
-deliberate porting decision: do not reintroduce pink noise without a separate
-real-time execution-budget and audio-regression test.
-
-The standard source is `main.cpp`. The immediately prior Pulse 2-passed source
-snapshot is retained under `fallback/pulse2_live_takeover_passed/`.
-
-## WebUI Companion Experiment
-
-The modal WebUSB companion can be used with the original Buzzrito web app. It
-boots into the editor only when Switch is latched Up at power-on; normal boots
-remain USB-free and use the stable performance renderer. The editor and its
-persisted presets are documented in
-`experimental/webusb_modal_editor/README.md`.
-
-The WebUI can display and save all original preset fields, but the renderer
-currently locks `glide`, `boc_amount`, and `noise_level` to zero. Changing
-those controls in the WebUI is stored for future compatibility work but has no
-audible effect. The active audible fields are `spread`, `wobble_amount`,
-`wobble_speed`, `saw_level`, `sub_level`, `comb_depth`, and `comb_mul`.
-
-## Beta Startup Check
-
-This release starts `chord_mode_` at 4 as a workaround for a brief apparent
-Down-switch press observed during startup on the test Workshop Computer. Beta
-testers should power-cycle the card several times and verify that it begins in
-chord mode 1, indicated by LED 5's first brightness level. Report any unit
-that begins at mode 4 or another mode; the workaround may depend on switch
-settling behavior across Workshop Computer revisions.
-
-## Notes
-
-The original Buzzrito firmware runs the RP2040 at 200 MHz, 48 kHz audio, and
-64-sample I2S blocks. This Workshop scaffold runs at 192 MHz. The current
-diagnostic build uses the original preset map but a simplified per-sample
-oscillator renderer so Workshop Computer real-time behavior can be checked
-before reintroducing the full Buzzrito comb/noise/wobble engine.
-
-The audio renderer and motion control tick execute from RAM at 192 MHz. The
-motion playhead is derived from the same 48 kHz audio interrupt, so it has no
-independent control clock to drift against audio.
+Editor mode is intentionally separate from performance, so USB traffic and
+flash writes cannot affect audio or motion playback.
 
 ## Build
 
 ```sh
-cmake -S cards/buzzrito -B cards/buzzrito/build -DCMAKE_BUILD_TYPE=Release
-cmake --build cards/buzzrito/build -j2
+export PICO_SDK_PATH=/path/to/pico-sdk
+cmake -S cards/buzzrito -B /private/tmp/workshop-buzzrito -DCMAKE_BUILD_TYPE=Release
+cmake --build /private/tmp/workshop-buzzrito -j2
 ```
 
-The build expects `PICO_SDK_PATH` to point at
-`/Users/adrianvos/coding/GitHub/pico-sdk`.
+## Attribution And Licence
+
+Workshop Buzzrito is released under the
+[MIT License](https://github.com/soveda/workshop-buddies/blob/main/cards/buzzrito/LICENSE).
+
+It adapts the MIT-licensed software in the
+[public Buddies Buzzrito source](https://github.com/plinkysynth/buddies_public/tree/main/sw/src/buzzrito),
+specifically Buzzrito preset definitions and XY interpolation, pink-noise and
+interpolation-noise algorithms, wavetable support, and the musical behavior of
+the original swarm, comb, wobble, and chord-note mechanisms. The Workshop
+per-sample renderer, knob/CV mapping, motion controls, WebUSB boot separation,
+pitch-CV conversion, and release integration were written for this card.
+
+No upstream logos, front-panel artwork, documentation graphics, or hardware
+design are included. See the
+[third-party notices](https://github.com/soveda/workshop-buddies/blob/main/cards/buzzrito/THIRD_PARTY_NOTICES.md)
+for the complete provenance record. `ComputerCard.h` is the MIT-licensed
+ComputerCard framework by Chris Johnson, distributed by Music Thing Modular.

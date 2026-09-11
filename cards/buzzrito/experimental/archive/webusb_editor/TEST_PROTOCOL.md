@@ -8,7 +8,7 @@
 1. Build this archived source locally and copy its generated UF2 to the
    Workshop Computer.
 2. Connect the card's USB-C port directly to a Chromium-family browser.
-3. Open <https://plinkysynth.com/buzzy_presets.html>, choose **Connect**, and
+3. Open <https://plinkysynth.com/docs/buzzrito-manual/>, choose **Connect**, and
    select `Workshop Buzzrito WebUSB`.
 
 ## Checks

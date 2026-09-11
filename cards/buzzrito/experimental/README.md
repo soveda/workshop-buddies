@@ -48,7 +48,8 @@ to the millivolt pitch units expected by the original Buzzrito renderer.
 
 `parameter_trials/chord_note_capture/` replaces the Workshop-only fixed chord
 intervals with the original Buzzrito note-memory behavior for chord modes 1-4.
-It has passed hardware testing and is the current most complete source branch.
+It has passed hardware testing and was promoted to `cards/buzzrito/`. Its
+unchanged passed source is retained in `fallback/chord_note_capture_passed/`.
 
 `PERFORMANCE_NOTES.md` records the real-time constraints for later USB, MIDI,
 BOC, and noise work.
