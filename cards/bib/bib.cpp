@@ -54,7 +54,7 @@ public:
         const bool pressed = SwitchVal() == Switch::Down;
 
         UpdateControls(mode, x, y, pressed);
-        UpdateLeds(mode, pressed);
+        UpdateLeds(mode);
 
         int32_t inL = AudioIn1();
         // A mono source patched into Audio 1 stays centred when Audio 2 is
@@ -151,16 +151,23 @@ private:
         }
     }
 
-    void UpdateLeds(uint8_t mode, bool pressed)
+    void UpdateLeds(uint8_t mode)
     {
-        // Two LEDs per mode: one steady mode marker and one that brightens
-        // with input level.  It remains readable in a dark performance.
-        for (uint32_t i = 0; i < 6; ++i) LedOff(i);
-        const uint32_t first = mode < 3 ? mode * 2 : 4;
-        LedOn(first, true);
-        const int32_t meter = Abs(AudioIn1()) * 2;
-        LedBrightness(first + 1, static_cast<uint16_t>(meter > 4095 ? 4095 : meter));
-        if (pressed) LedOn(5, true);
+        // LEDs 0 and 1 form a small binary page display.  This leaves the
+        // other four LEDs free to show the useful, persistent effect levels:
+        //
+        //   mode 0: 0 off, 1 off       mode 2: 0 off, 1 on
+        //   mode 1: 0 on,  1 off       mode 3: 0 on,  1 on
+        LedOn(0, (mode & 1u) != 0);
+        LedOn(1, (mode & 2u) != 0);
+
+        // The remaining LEDs describe the sound, rather than whichever page
+        // happens to be selected: drive, delay feedback, reverb decay, then
+        // wet mix.  Their levels remain visible while adjusting any page.
+        LedBrightness(2, static_cast<uint16_t>(drive_));
+        LedBrightness(3, static_cast<uint16_t>(delayFeedback_));
+        LedBrightness(4, static_cast<uint16_t>(reverbFeedback_));
+        LedBrightness(5, static_cast<uint16_t>(mix_));
     }
 
     int32_t Shape(int32_t input, int32_t drive) const

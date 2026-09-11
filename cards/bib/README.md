@@ -14,7 +14,9 @@ The card uses the bundled `ComputerCard.h` **v0.3.0** (12 May 2026).
 - Main: virtual slider; turn it through four regions to select a mode
 - X/Y: the two controls for that mode
 - Z down: tap, toggle, hold, or freeze according to the mode
-- LEDs: a mode marker, input meter, and active-gesture feedback
+- LEDs 0–1: binary mode page (`off/off`, `on/off`, `off/on`, `on/on`)
+- LEDs 2–5: persistent level indicators for drive, delay feedback, reverb
+  decay, and wet mix respectively
 
 ## Modes
 
