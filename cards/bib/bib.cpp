@@ -44,17 +44,18 @@ static inline int32_t Abs(int32_t value) { return value < 0 ? -value : value; }
 class PagePickup
 {
 public:
-    void Select(uint8_t page)
+    void Select(uint8_t page, bool alternate)
     {
-        if (page == selected_) return;
+        if (page == selected_ && alternate == alternate_) return;
         selected_ = page;
+        alternate_ = alternate;
         caught_[0] = false;
         caught_[1] = false;
     }
 
     int32_t Update(uint8_t control, int32_t raw)
     {
-        int32_t &saved = values_[selected_][control];
+        int32_t &saved = values_[alternate_ ? 1 : 0][selected_][control];
         if (!caught_[control]) {
             constexpr int32_t kCatchWindow = 64;
             if (raw >= saved - kCatchWindow && raw <= saved + kCatchWindow) {
@@ -69,13 +70,22 @@ public:
 
 private:
     // Defaults match the sound heard immediately after boot.
-    int32_t values_[4][2] = {
-        {2048, 2048}, // drive, delay send
-        {2022, 2560}, // delay time, feedback
-        {1500, 1966}, // reverb send, decay
-        {2048, 2731}, // mix, output level
+    int32_t values_[2][4][2] = {
+        { // Middle: the four main sound pages.
+            {2048, 2048}, // drive, delay send
+            {2022, 2560}, // delay time, feedback
+            {1500, 1966}, // reverb send, decay
+            {2048, 2731}, // mix, output level
+        },
+        { // Up: currently used by the Delay tape page.
+            {2048, 2048},
+            {2048,    0}, // normal transport speed, no wobble
+            {1500, 1966},
+            {2048, 2731},
+        },
     };
     uint8_t selected_ = 255;
+    bool alternate_ = false;
     bool caught_[2] = {false, false};
 };
 } // namespace
@@ -91,12 +101,17 @@ public:
         // regions.  The LEDs show the selected region continuously.
         const int32_t main = KnobVal(Knob::Main);
         const uint8_t mode = static_cast<uint8_t>((main * 4) >> 12);
-        pickup_.Select(mode);
+        // Up is a latching secondary layer.  At present it belongs to the
+        // delay page, where it becomes a tape-transport page.  The other
+        // pages retain their main controls until their own Up functions are
+        // designed.
+        const bool tapePage = SwitchVal() == Switch::Up && mode == 1;
+        pickup_.Select(mode, tapePage);
         const int32_t x = pickup_.Update(0, KnobVal(Knob::X));
         const int32_t y = pickup_.Update(1, KnobVal(Knob::Y));
         const bool pressed = SwitchVal() == Switch::Down;
 
-        UpdateControls(mode, x, y, pressed);
+        UpdateControls(mode, x, y, pressed, tapePage);
         UpdateLeds(mode);
 
         int32_t inL = AudioIn1();
@@ -115,11 +130,20 @@ public:
         // Freeze stops new material entering, but the feedback path remains
         // alive.  It is the familiar "hold the dub" gesture from Bib.
         const int32_t inputSend = freeze_ ? 0 : delaySend_;
-        delayLeft[write_] = static_cast<int16_t>(ClampAudio(
+        const int16_t writeL = static_cast<int16_t>(ClampAudio(
             ((drivenL * inputSend) + (delayedR * delayFeedback_)) >> 12));
-        delayRight[write_] = static_cast<int16_t>(ClampAudio(
+        const int16_t writeR = static_cast<int16_t>(ClampAudio(
             ((drivenR * inputSend) + (delayedL * delayFeedback_)) >> 12));
-        write_ = (write_ + 1) & kDelayMask;
+        const uint32_t advances = AdvanceTape();
+        // At normal speed this writes once.  Below normal it occasionally
+        // holds a tape position; above normal it duplicates a sample into
+        // consecutive positions.  That is a cheap, intentional tape-style
+        // pitch bend with no floating point or resampling buffer.
+        for (uint32_t i = 0; i < advances; ++i) {
+            delayLeft[write_] = writeL;
+            delayRight[write_] = writeR;
+            write_ = (write_ + 1) & kDelayMask;
+        }
 
         const int32_t reverbIn = ((delayedL + delayedR) * reverbSend_) >> 13;
         const int32_t reverb = Reverb(reverbIn, reverbFeedback_, shimmer_);
@@ -153,8 +177,12 @@ private:
     uint16_t combBPos_ = 0;
     uint16_t diffuserPos_ = 0;
     PagePickup pickup_;
+    uint32_t transportQ16_ = 65536;
+    uint32_t transportRemainder_ = 0;
+    uint16_t wowPhase_ = 0;
+    int32_t wobbleDepth_ = 0;
 
-    void UpdateControls(uint8_t mode, int32_t x, int32_t y, bool pressed)
+    void UpdateControls(uint8_t mode, int32_t x, int32_t y, bool pressed, bool tapePage)
     {
         // Count in samples so a pair of Z presses in delay mode becomes a
         // reliable, tempo-like tap time without timers or floating point.
@@ -164,6 +192,18 @@ private:
 
         freeze_ = false;
         shimmer_ = false;
+        transportQ16_ = 65536;
+        wobbleDepth_ = 0;
+
+        if (tapePage) {
+            // X is a direct transport control: 12 o'clock is ordinary tape
+            // speed, CCW slows to a complete stop, CW reaches double speed.
+            // Y adds slow wow/flutter around that chosen transport speed.
+            transportQ16_ = static_cast<uint32_t>(x) << 5;
+            wobbleDepth_ = y;
+            return;
+        }
+
         switch (mode) {
         case 0:
             drive_ = x;
@@ -193,6 +233,29 @@ private:
             freeze_ = pressed;
             break;
         }
+    }
+
+    uint32_t AdvanceTape()
+    {
+        // A triangle LFO is enough to make a controllable tape wobble.  Its
+        // 1.5 Hz rate is deliberately slow: it feels like a moving tape reel
+        // rather than a conventional vibrato oscillator.
+        wowPhase_ = static_cast<uint16_t>(wowPhase_ + 2);
+        int32_t triangle = wowPhase_ < 32768 ? wowPhase_ : 65535 - wowPhase_;
+        triangle = (triangle << 1) - 32768; // signed Q15, -32768..32766
+
+        int32_t speed = static_cast<int32_t>(transportQ16_);
+        // Split the Q12 × Q15 modulation before multiplying by transport so
+        // this remains safely within fast 32-bit RP2040 arithmetic.
+        const int32_t wobble = (wobbleDepth_ * triangle) >> 13;
+        speed += (speed * wobble) >> 14;
+        if (speed < 0) speed = 0;
+        if (speed > 131072) speed = 131072; // do not exceed 2x transport
+
+        transportRemainder_ += static_cast<uint32_t>(speed);
+        const uint32_t advances = transportRemainder_ >> 16;
+        transportRemainder_ &= 0xffff;
+        return advances;
     }
 
     void UpdateLeds(uint8_t mode)

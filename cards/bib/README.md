@@ -38,6 +38,15 @@ Audio In 1 is the primary input. With nothing patched to Audio In 2, the card
 normalises Audio In 1 to both stereo channels. Audio Outs 1 and 2 carry the
 stereo result.
 
+### Delay tape page (Switch Up)
+
+On Mode 1 only, the latching Up position opens a secondary tape page. X sets
+the delay's transport speed: counter-clockwise slows continuously to a stop,
+12 o'clock is normal speed, and clockwise reaches double speed. Y sets a slow
+wow/flutter depth around that speed. Return the switch to Middle for normal
+delay time, feedback, and Z tap-tempo operation. Both tape controls use pot
+pickup independently of the normal Delay page.
+
 ## Build
 
 With a configured Pico SDK:
