@@ -1,7 +1,7 @@
 # Bib for Workshop Computer
 
-**Status: original Bib clock-quantisation port awaiting focused hardware test.
-Prior builds are archived in `archive/`.**
+**Status: hardware-tested release candidate — Bib 1.0.0-rc1. Prior builds are
+archived in `archive/`; the flashable release candidate is in `releases/`.**
 
 This is a Bib-inspired stereo delay and reverb card for the Music Thing
 Workshop Computer. It translates Bib's touch-first interface into the
