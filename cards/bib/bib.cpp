@@ -181,6 +181,9 @@ private:
     uint32_t transportRemainder_ = 0;
     uint16_t wowPhase_ = 0;
     int32_t wobbleDepth_ = 0;
+    bool tapTimeActive_ = false;
+    int32_t tapTimeKnob_ = 0;
+    uint32_t ledPhase_ = 0;
 
     void UpdateControls(uint8_t mode, int32_t x, int32_t y, bool pressed, bool tapePage)
     {
@@ -200,7 +203,8 @@ private:
             // speed, CCW slows to a complete stop, CW reaches double speed.
             // Y adds slow wow/flutter around that chosen transport speed.
             transportQ16_ = static_cast<uint32_t>(x) << 5;
-            wobbleDepth_ = y;
+            // Full CW is deliberately restrained to a ±25% speed swing.
+            wobbleDepth_ = (y * 1024) >> 12;
             return;
         }
 
@@ -212,11 +216,19 @@ private:
             break;
         case 1:
             // 4.3 ms to 341 ms: long enough for slap, echo and short loops.
-            delaySamples_ = 208 + static_cast<uint32_t>((x * (kDelaySize - 209)) >> 12);
-            delayFeedback_ = (y * 4000) >> 12; // always below runaway
+            // A tapped time stays active until X is deliberately moved.
+            if (!tapTimeActive_ || Abs(x - tapTimeKnob_) > 64) {
+                tapTimeActive_ = false;
+                delaySamples_ = 208 + static_cast<uint32_t>((x * (kDelaySize - 209)) >> 12);
+            }
+            // Leave enough feedback for long repeats, but below the hard
+            // clipping loop this compact delay otherwise reaches at maximum.
+            delayFeedback_ = (y * 3400) >> 12;
             if (newPress) {
                 if (tapCounter_ != 0 && samplesSinceTap_ > 240) {
                     delaySamples_ = samplesSinceTap_;
+                    tapTimeActive_ = true;
+                    tapTimeKnob_ = x;
                 }
                 samplesSinceTap_ = 0;
                 tapCounter_ = 1;
@@ -224,7 +236,7 @@ private:
             break;
         case 2:
             reverbSend_ = x;
-            reverbFeedback_ = 1400 + ((y * 2500) >> 12);
+            reverbFeedback_ = 1400 + ((y * 1800) >> 12);
             shimmer_ = pressed;
             break;
         default:
@@ -271,7 +283,17 @@ private:
         // The remaining LEDs describe the sound, rather than whichever page
         // happens to be selected: drive, delay feedback, reverb decay, then
         // wet mix.  Their levels remain visible while adjusting any page.
-        LedBrightness(2, static_cast<uint16_t>(drive_));
+        ++ledPhase_;
+        if (wavefold_) {
+            // LED 2 keeps showing drive level, but its gentle breathing makes
+            // wavefold visibly distinct from the steady overdrive state.
+            const uint32_t phase = (ledPhase_ >> 8) & 255u;
+            const int32_t triangle = phase < 128 ? phase : 255 - phase;
+            const int32_t brightness = (drive_ * (2048 + (triangle << 4))) >> 12;
+            LedBrightness(2, static_cast<uint16_t>(brightness));
+        } else {
+            LedBrightness(2, static_cast<uint16_t>(drive_));
+        }
         LedBrightness(3, static_cast<uint16_t>(delayFeedback_));
         LedBrightness(4, static_cast<uint16_t>(reverbFeedback_));
         LedBrightness(5, static_cast<uint16_t>(mix_));
@@ -296,7 +318,9 @@ private:
         // Shimmer here is deliberately a bright feedback lift, not a faux
         // pitch shifter.  It is stable, light on CPU, and clearly labelled in
         // the documentation as a colour rather than an octave effect.
-        const int32_t colour = shimmer ? ((a - b) >> 2) : 0;
+        // A small cross term gives brightness without adding enough gain to
+        // make the two combs self-oscillate when Z is held for shimmer.
+        const int32_t colour = shimmer ? ((a - b) >> 6) : 0;
         combA[combAPos_] = static_cast<int16_t>(ClampAudio(input + ((a * feedback) >> 12) + colour));
         combB[combBPos_] = static_cast<int16_t>(ClampAudio(input + ((b * feedback) >> 12) - colour));
         if (++combAPos_ == kCombA) combAPos_ = 0;

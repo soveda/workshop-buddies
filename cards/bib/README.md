@@ -18,6 +18,9 @@ The card uses the bundled `ComputerCard.h` **v0.3.0** (12 May 2026).
 - LEDs 2–5: persistent level indicators for drive, delay feedback, reverb
   decay, and wet mix respectively
 
+LED 2 is steady for overdrive and gently pulses for wavefold; in both cases
+its brightness still tracks drive level.
+
 When you change Main page, X and Y use **pot pickup**. A control does not
 change its newly selected parameter until the physical pot reaches that
 parameter's saved position. This prevents abrupt sound changes when moving
@@ -43,7 +46,7 @@ stereo result.
 On Mode 1 only, the latching Up position opens a secondary tape page. X sets
 the delay's transport speed: counter-clockwise slows continuously to a stop,
 12 o'clock is normal speed, and clockwise reaches double speed. Y sets a slow
-wow/flutter depth around that speed. Return the switch to Middle for normal
+wow/flutter depth around that speed (up to approximately ±25%). Return the switch to Middle for normal
 delay time, feedback, and Z tap-tempo operation. Both tape controls use pot
 pickup independently of the normal Delay page.
 
