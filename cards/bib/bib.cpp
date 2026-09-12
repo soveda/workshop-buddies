@@ -432,7 +432,10 @@ private:
         decay = (decay * decay) >> 12;
         decay = (decay * decay) >> 12;
         decay = 4096 - decay;
-        shimmer_am_q12 = shimmer ? (1600 / (feedback + 1024)) : 0;
+        // Bib derives shimmer gain from a 0..4096 pressure value.  Workshop
+        // Z has no pressure, so its held state uses a musical fixed 2048
+        // amount while retaining Bib's feedback-dependent safety scaling.
+        shimmer_am_q12 = shimmer ? ((2048 * 800) / (feedback + 1024)) : 0;
 
         int wetL = 0;
         int wetR = 0;
