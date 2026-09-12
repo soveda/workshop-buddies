@@ -72,10 +72,11 @@ The resulting UF2 is `build/bib_workshop.uf2`.
 
 The original Bib's 32k-sample stereo delay and reverb engine are designed for a
 different block-audio hardware environment. This version uses a 32k-sample
-stereo delay plus a small, fixed-point comb/allpass reverb. That fits safely
-alongside a copy-to-RAM Workshop build and keeps every `ProcessSample()` call
-small. The design is a starting point for listening tests, not a one-to-one
-port of the original firmware.
+stereo delay and directly adapts Bib's original fixed-point modulated reverb
+tank, including damping, limiter, modulation, and shimmer. The reverb retains
+its original every-two-samples cadence, with interpolation back to the
+Workshop Computer's 48 kHz output. The design remains a Workshop control/UI
+adaptation, not a one-to-one port of the original hardware.
 
 The card runs the Workshop Computer at **192 MHz**. This provides headroom for
 the Bib DSP and is an alias-safe clock for `ComputerCard.h` v0.3.0's CV PWM.

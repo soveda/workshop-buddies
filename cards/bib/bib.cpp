@@ -7,9 +7,14 @@
 // for ComputerCard's 48 kHz per-sample interrupt.
 
 #include <cstdint>
+#include <cstdlib>
 
 #include "ComputerCard.h"
 #include "hardware/clocks.h"
+
+// Directly adapted from the MIT-licensed Buddies Bib firmware.  It retains
+// Bib's modulated Dattorro/Griesinger tank, damping, limiter and shimmer.
+#include "bib_reverb.h"
 
 namespace
 {
@@ -17,17 +22,8 @@ constexpr int32_t kFull = 4095;
 constexpr uint32_t kDelaySize = 32768; // power of two: 683 ms at 48 kHz
 constexpr uint32_t kDelayMask = kDelaySize - 1;
 
-// These are deliberately modest.  Together with the main delay they leave
-// ample RAM for a copy-to-RAM build on the RP2040.
-constexpr uint16_t kCombA = 1429;
-constexpr uint16_t kCombB = 2083;
-constexpr uint16_t kDiffuser = 541;
-
 static int16_t delayLeft[kDelaySize] = {};
 static int16_t delayRight[kDelaySize] = {};
-static int16_t combA[kCombA] = {};
-static int16_t combB[kCombB] = {};
-static int16_t diffuser[kDiffuser] = {};
 
 static inline int32_t ClampAudio(int32_t value)
 {
@@ -173,10 +169,12 @@ public:
             write_ = (write_ + 1) & kDelayMask;
         }
 
-        const int32_t reverbIn = ((delayedL + delayedR) * reverbSend_) >> 13;
-        const int32_t reverb = Reverb(reverbIn, reverbFeedback_, shimmer_);
-        const int32_t wetL = delayedL + reverb;
-        const int32_t wetR = delayedR + reverb;
+        int32_t reverbL = 0;
+        int32_t reverbR = 0;
+        OriginalBibReverb(drivenL + delayedL, drivenR + delayedR,
+                          reverbSend_, reverbFeedback_, shimmer_, reverbL, reverbR);
+        const int32_t wetL = delayedL + reverbL;
+        const int32_t wetR = delayedR + reverbR;
 
         // Wet/dry is a true crossfade, then output level is applied last so
         // changing the mix does not create a sudden gain jump.
@@ -203,9 +201,6 @@ private:
     bool freeze_ = false;
     bool shimmer_ = false;
     bool pingPong_ = false;
-    uint16_t combAPos_ = 0;
-    uint16_t combBPos_ = 0;
-    uint16_t diffuserPos_ = 0;
     PagePickup pickup_;
     uint32_t transportQ16_ = 65536;
     uint32_t transportRemainder_ = 0;
@@ -219,6 +214,13 @@ private:
     uint32_t clockPeriod_ = 0;
     bool clockSync_ = false;
     bool clockSuppressed_ = false;
+    int32_t reverbPendingL_ = 0;
+    int32_t reverbPendingR_ = 0;
+    int32_t reverbPreviousL_ = 0;
+    int32_t reverbPreviousR_ = 0;
+    int32_t reverbCurrentL_ = 0;
+    int32_t reverbCurrentR_ = 0;
+    bool reverbOddSample_ = false;
 
     void UpdateControls(uint8_t mode, int32_t x, int32_t y, bool pressed, bool tapePage)
     {
@@ -402,26 +404,45 @@ private:
         return folded - 2048;
     }
 
-    int32_t Reverb(int32_t input, int32_t feedback, bool shimmer)
+    void OriginalBibReverb(int32_t inputL, int32_t inputR, int32_t send,
+                           int32_t feedback, bool shimmer,
+                           int32_t &outL, int32_t &outR)
     {
-        const int32_t a = combA[combAPos_];
-        const int32_t b = combB[combBPos_];
-        // Shimmer here is deliberately a bright feedback lift, not a faux
-        // pitch shifter.  It is stable, light on CPU, and clearly labelled in
-        // the documentation as a colour rather than an octave effect.
-        // A small cross term gives brightness without adding enough gain to
-        // make the two combs self-oscillate when Z is held for shimmer.
-        const int32_t colour = shimmer ? ((a - b) >> 5) : 0;
-        combA[combAPos_] = static_cast<int16_t>(ClampAudio(input + ((a * feedback) >> 12) + colour));
-        combB[combBPos_] = static_cast<int16_t>(ClampAudio(input + ((b * feedback) >> 12) - colour));
-        if (++combAPos_ == kCombA) combAPos_ = 0;
-        if (++combBPos_ == kCombB) combBPos_ = 0;
+        // Original Bib runs this reverb once per two stereo samples.  Buffer
+        // one sample here, then interpolate its output back to 48 kHz.
+        if (!reverbOddSample_) {
+            reverbPendingL_ = inputL;
+            reverbPendingR_ = inputR;
+            reverbOddSample_ = true;
+            outL = (reverbPreviousL_ + reverbCurrentL_) >> 1;
+            outR = (reverbPreviousR_ + reverbCurrentR_) >> 1;
+            return;
+        }
 
-        const int32_t tank = (a + b) >> 1;
-        const int32_t delayed = diffuser[diffuserPos_];
-        diffuser[diffuserPos_] = static_cast<int16_t>(ClampAudio(tank + ((delayed * 2300) >> 12)));
-        if (++diffuserPos_ == kDiffuser) diffuserPos_ = 0;
-        return delayed - ((tank * 2300) >> 12);
+        reverbOddSample_ = false;
+        const int32_t sourceL = (reverbPendingL_ + inputL) >> 1;
+        const int32_t sourceR = (reverbPendingR_ + inputR) >> 1;
+        const int32_t taperedSend = (send * send) >> 13;
+        const int32_t inputScaleL = ((sourceL << 4) * taperedSend) >> 12;
+        const int32_t inputScaleR = ((sourceR << 4) * taperedSend) >> 12;
+
+        // Keep Bib's nonlinear decay mapping, rather than treating the knob
+        // as a linear feedback coefficient.
+        int32_t decay = 4096 - feedback;
+        decay = (decay * decay) >> 12;
+        decay = (decay * decay) >> 12;
+        decay = 4096 - decay;
+        shimmer_am_q12 = shimmer ? (1600 / (feedback + 1024)) : 0;
+
+        int wetL = 0;
+        int wetR = 0;
+        do_reverb(inputScaleL, inputScaleR, decay, &wetL, &wetR);
+        reverbPreviousL_ = reverbCurrentL_;
+        reverbPreviousR_ = reverbCurrentR_;
+        reverbCurrentL_ = wetL >> 4;
+        reverbCurrentR_ = wetR >> 4;
+        outL = reverbCurrentL_;
+        outR = reverbCurrentR_;
     }
 
     bool wasPressed_ = false;
