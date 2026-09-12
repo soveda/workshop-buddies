@@ -22,11 +22,6 @@ constexpr int32_t kFull = 4095;
 constexpr uint32_t kDelaySize = 32768; // power of two: 683 ms at 48 kHz
 constexpr uint32_t kDelayMask = kDelaySize - 1;
 constexpr uint32_t kDelayPositionMask = (kDelaySize << 8) - 1;
-// Bib accepts clocks from 50 ms to 2 s. The delay buffer is shorter than the
-// original's tape-scaled maximum, but its quantiser can still use divisions of
-// a clock period longer than the physical buffer.
-constexpr uint32_t kMinClockPeriod = 2400;
-constexpr uint32_t kMaxClockPeriod = 96000;
 
 static int16_t delayLeft[kDelaySize] = {};
 static int16_t delayRight[kDelaySize] = {};
@@ -352,16 +347,14 @@ private:
         if (PulseIn1RisingEdge()) {
             if (lastClockSample_ != 0) {
                 const uint32_t interval = sampleCounter_ - lastClockSample_;
-                // Match Bib's valid clock range: 50 ms to 2 s. Its original
-                // CV input additionally checked pulse width; ComputerCard's
-                // digital Pulse In already supplies a debounced edge.
+                // 5 ms avoids switch/noise glitches; the buffer length is
+                // the maximum directly useful interval on this compact port.
                 // A cable can generate a short spurious edge as it is
                 // removed. Do not let that single edge replace an already
                 // established tempo with an implausibly different period.
                 const bool plausible = !clockSync_ ||
                     (interval >= (clockPeriod_ >> 1) && interval <= (clockPeriod_ << 1));
-                if (interval >= kMinClockPeriod && interval < kMaxClockPeriod &&
-                    plausible && !clockSuppressed_) {
+                if (interval >= 240 && interval < kDelaySize && plausible && !clockSuppressed_) {
                     clockPeriod_ = interval;
                     clockSync_ = true;
                 }
@@ -390,42 +383,21 @@ private:
 
     uint32_t QuantiseToClock(uint32_t target) const
     {
-        // Direct adaptation of Bib's update_delay_time(). It repeatedly
-        // shifts the measured period by octaves until X's requested time lies
-        // between 3/4 and 3/2 of that period, then chooses the nearest of
-        // 3/4, straight, or dotted. This is why the original delay feels
-        // rhythmically quantised without taking X away from the player.
-        uint64_t period = clockPeriod_;
-        for (int attempt = 0; attempt < 24 && period != 0; ++attempt) {
-            const uint64_t dotted = (period * 3u) / 2u;
-            const uint64_t below = dotted / 2u;
-            if (below > target) {
-                period >>= 1;
-                continue;
+        const uint32_t candidates[] = {
+            clockPeriod_ >> 1, clockPeriod_, clockPeriod_ + (clockPeriod_ >> 1),
+            clockPeriod_ << 1
+        };
+        uint32_t closest = target;
+        uint32_t distance = 0xffffffffu;
+        for (uint32_t candidate : candidates) {
+            if (candidate < 208 || candidate >= kDelaySize) continue;
+            const uint32_t difference = candidate > target ? candidate - target : target - candidate;
+            if (difference < distance) {
+                distance = difference;
+                closest = candidate;
             }
-            if (dotted <= target) {
-                period <<= 1;
-                continue;
-            }
-
-            uint32_t closest = target;
-            uint32_t distance = 0xffffffffu;
-            const uint64_t candidates[] = {below, period, dotted};
-            for (uint64_t candidate : candidates) {
-                // The Workshop's fixed 32k tape cannot read a longer delay,
-                // so reject only out-of-buffer options; neighbouring octave
-                // divisions remain valid just as on the original Bib.
-                if (candidate < 208 || candidate >= kDelaySize) continue;
-                const uint32_t value = static_cast<uint32_t>(candidate);
-                const uint32_t difference = value > target ? value - target : target - value;
-                if (difference < distance) {
-                    distance = difference;
-                    closest = value;
-                }
-            }
-            return closest;
         }
-        return target;
+        return closest;
     }
 
     int32_t ReadDelay(const int16_t *buffer, uint32_t positionQ8) const

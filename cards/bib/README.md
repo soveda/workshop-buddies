@@ -1,7 +1,7 @@
 # Bib for Workshop Computer
 
-**Status: second-pass delay firmware awaiting focused hardware test. The prior
-hardware-passing first-pass build is archived in `archive/0.1.0-first-pass-delay/`.**
+**Status: original Bib clock-quantisation port awaiting focused hardware test.
+Prior builds are archived in `archive/`.**
 
 This is a Bib-inspired stereo delay and reverb card for the Music Thing
 Workshop Computer. It translates Bib's touch-first interface into the
@@ -36,12 +36,14 @@ between pages.
   interval between two taps. After tapping, make a substantial turn of X to
   return to manual time control.
 
-Pulse In 1 is an external delay clock. After two valid rising edges, Bib
-snaps the selected delay time to the nearest half, whole, dotted, or double
-clock division. A Z tap returns to manual tap tempo; clock detection is armed
-again after the clock stops or is unplugged. On clock loss, the last synced
-repeat time is held until X is deliberately moved, avoiding an audible jump
-back to the physical pot position.
+Pulse In 1 is an external delay clock. After two valid rising edges 50 ms to
+2 s apart, Bib measures their interval and uses the original Bib quantiser:
+X still selects the desired delay range, but its time snaps to the nearest
+3/4, straight, or dotted division of a suitable octave of that clock. A Z tap
+returns to manual tap tempo; clock detection is armed again after the clock
+stops or is unplugged. On clock loss, the last synced repeat time is held until
+X is deliberately moved, avoiding an audible jump back to the physical pot
+position.
 - Mode 2: X = reverb send; Y = reverb decay.
 - Mode 3 (Main fully clockwise): X = wet/dry mix; Y = output level; hold Z
   to freeze the delay input for dub-style looping.
@@ -100,9 +102,9 @@ send.
 
 ## Fallback
 
-`archive/0.1.0-first-pass-delay/` contains the complete source and UF2 for the
-last full hardware-passing revision, plus its checksum. It is a direct fallback
-if this second-pass delay behaviour is not preferred.
+`archive/` contains complete source and UF2 snapshots for each superseded
+hardware test stage, with checksums. The current clock revision can therefore
+be evaluated and reverted independently.
 
 The card runs the Workshop Computer at **192 MHz**. This provides headroom for
 the Bib DSP and is an alias-safe clock for `ComputerCard.h` v0.3.0's CV PWM.
