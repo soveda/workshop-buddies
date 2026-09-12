@@ -76,3 +76,6 @@ stereo delay plus a small, fixed-point comb/allpass reverb. That fits safely
 alongside a copy-to-RAM Workshop build and keeps every `ProcessSample()` call
 small. The design is a starting point for listening tests, not a one-to-one
 port of the original firmware.
+
+The card runs the Workshop Computer at **192 MHz**. This provides headroom for
+the Bib DSP and is an alias-safe clock for `ComputerCard.h` v0.3.0's CV PWM.

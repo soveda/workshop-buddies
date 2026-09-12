@@ -9,6 +9,7 @@
 #include <cstdint>
 
 #include "ComputerCard.h"
+#include "hardware/clocks.h"
 
 namespace
 {
@@ -428,6 +429,10 @@ private:
 
 int main()
 {
+    // The original Bib runs its RP2040 at 200 MHz.  192 MHz is a proven
+    // Workshop Computer speed, gives this denser DSP more headroom, and is
+    // an alias-safe multiple for ComputerCard v0.3.x's CV PWM timing.
+    set_sys_clock_khz(192000, true);
     Bib bib;
     bib.Run();
 }
