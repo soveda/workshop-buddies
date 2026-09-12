@@ -79,3 +79,16 @@ port of the original firmware.
 
 The card runs the Workshop Computer at **192 MHz**. This provides headroom for
 the Bib DSP and is an alias-safe clock for `ComputerCard.h` v0.3.0's CV PWM.
+
+## Future performance option: 240 MHz
+
+The RP2040 can be overclocked to **240 MHz**, which is also an alias-safe
+multiple for ComputerCard v0.3.0's CV PWM timing. This is deliberately **not
+the default**: 192 MHz is the current tested setting.
+
+Consider 240 MHz only if the direct port of the original Bib DSP needs more
+audio headroom after it has been measured on hardware. Make the clock change
+in `main()` and then test cold boot, repeated reset, a sustained high-feedback
+patch, Pulse In clock sync, tape transport, and at least 30 minutes of normal
+use. Revert to 192 MHz if any board shows instability, audio dropouts, or
+unreliable reset behaviour.
