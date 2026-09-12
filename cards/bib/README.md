@@ -32,9 +32,13 @@ between pages.
 - Mode 0 (Main fully counter-clockwise): X = drive; Y = bipolar delay send:
   centre is off, clockwise is normal stereo delay, and counter-clockwise is
   3:4 ping-pong delay. Z tap toggles between overdrive and wavefold.
-- Mode 1: X = delay time; Y = feedback; Z tap sets delay time from the
-  interval between two taps. After tapping, make a substantial turn of X to
-  return to manual time control.
+- Mode 1: X = delay time; Y = feedback. Z recreates Bib's multi-tap
+  tapography: the first tap starts a phrase, then up to eight following taps
+  (within one second of each other) become relative repeat heads. The final
+  tap sets the overall delay length. Workshop's Z has no pressure sensing, so
+  all recorded heads have equal level. Two taps make the familiar single
+  tap-tempo repeat. After tapping, make a substantial turn of X to return to
+  manual time control.
 
 Pulse In 1 is an external delay clock. After two valid rising edges 50 ms to
 2 s apart, Bib measures their interval and uses the original Bib quantiser:

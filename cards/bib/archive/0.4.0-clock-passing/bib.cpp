@@ -152,32 +152,14 @@ public:
         const int32_t delayTargetQ8 = static_cast<int32_t>(delaySamples_ << 8);
         delayTimeQ8_ += (delayTargetQ8 - delayTimeQ8_) >> 7;
         const uint32_t delayTimeQ8 = static_cast<uint32_t>(delayTimeQ8_);
-        // Bib's Spider can record up to eight relative tap positions. Their
-        // sum forms the audible multi-tap return; only the final tap returns
-        // to the feedback path, exactly as in the original DSP.
-        int32_t delayedL = 0;
-        int32_t delayedR = 0;
-        int32_t feedbackTapL = 0;
-        int32_t feedbackTapR = 0;
-        for (uint8_t tap = 0; tap < delayTapCount_; ++tap) {
-            const uint32_t tapTimeQ8 = static_cast<uint32_t>(
-                (static_cast<uint64_t>(delayTimeQ8) * delayTapTimesQ12_[tap]) >> 12);
-            const uint32_t readL = (delayPositionQ8_ - tapTimeQ8) & kDelayPositionMask;
-            // Bib's negative delay-send side uses a different right-hand
-            // delay length. That asymmetry gives its moving ping-pong field.
-            const uint32_t rightTimeQ8 = pingPong_ ? ((tapTimeQ8 * 3) >> 2) : tapTimeQ8;
-            const uint32_t readR = (delayPositionQ8_ - rightTimeQ8) & kDelayPositionMask;
-            const int32_t tapL = ReadDelay(delayLeft, readL);
-            const int32_t tapR = ReadDelay(delayRight, readR);
-            delayedL += (tapL * delayTapLevelsQ12_[tap]) >> 12;
-            delayedR += (tapR * delayTapLevelsQ12_[tap]) >> 12;
-            if (tap + 1 == delayTapCount_) {
-                feedbackTapL = tapL;
-                feedbackTapR = tapR;
-            }
-        }
-        delayedL = DelaySoftLimit(delayedL);
-        delayedR = DelaySoftLimit(delayedR);
+        const uint32_t readL = (delayPositionQ8_ - delayTimeQ8) & kDelayPositionMask;
+        // Bib's negative delay-send side uses a different right-hand delay
+        // length.  That asymmetry turns the usual stereo repeat into the
+        // distinct, moving ping-pong character of the original card.
+        const uint32_t rightTimeQ8 = pingPong_ ? ((delayTimeQ8 * 3) >> 2) : delayTimeQ8;
+        const uint32_t readR = (delayPositionQ8_ - rightTimeQ8) & kDelayPositionMask;
+        const int32_t delayedL = ReadDelay(delayLeft, readL);
+        const int32_t delayedR = ReadDelay(delayRight, readR);
 
         // Freeze stops new material entering, but the feedback path remains
         // alive.  It is the familiar "hold the dub" gesture from Bib.
@@ -194,8 +176,8 @@ public:
         constexpr int32_t kFeedbackSinQ12 = 2408;
         const int32_t feedbackCos = (kFeedbackCosQ12 * writeFeedback) >> 12;
         const int32_t feedbackSin = (kFeedbackSinQ12 * writeFeedback) >> 12;
-        const int32_t feedbackL = ((feedbackTapL * feedbackCos) - (feedbackTapR * feedbackSin)) >> 12;
-        const int32_t feedbackR = ((feedbackTapL * feedbackSin) + (feedbackTapR * feedbackCos)) >> 12;
+        const int32_t feedbackL = ((delayedL * feedbackCos) - (delayedR * feedbackSin)) >> 12;
+        const int32_t feedbackR = ((delayedL * feedbackSin) + (delayedR * feedbackCos)) >> 12;
         int32_t writeL = ((drivenL * inputSend) >> 12) + feedbackL;
         int32_t writeR = ((drivenR * inputSend) >> 12) + feedbackR;
         // The original delay writer removes accumulated DC before recording
@@ -234,15 +216,10 @@ private:
     int32_t delayTimeQ8_ = 8192 << 8;
     int32_t delayDcL_ = 0;
     int32_t delayDcR_ = 0;
+    uint32_t tapCounter_ = 0;
+    uint32_t samplesSinceTap_ = 0;
     uint32_t delaySamples_ = 8192;
     uint32_t delayTargetSamples_ = 8192;
-    uint16_t delayTapTimesQ12_[8] = {4096};
-    uint16_t delayTapLevelsQ12_[8] = {4096};
-    uint8_t delayTapCount_ = 1;
-    uint32_t tapSequenceStartSample_ = 0;
-    uint32_t lastTapSample_ = 0;
-    uint8_t recordedTapCount_ = 0;
-    uint32_t recordedTapOffsets_[8] = {};
     int32_t drive_ = 2048;
     int32_t delaySend_ = 2048;
     int32_t delayFeedback_ = 2500;
@@ -281,6 +258,9 @@ private:
                         bool tapePage, bool reverbPage)
     {
         UpdateClock();
+        // Count in samples so a pair of Z presses in delay mode becomes a
+        // reliable, tempo-like tap time without timers or floating point.
+        if (samplesSinceTap_ < kDelaySize - 1) ++samplesSinceTap_;
         const bool newPress = pressed && !wasPressed_;
         wasPressed_ = pressed;
 
@@ -339,7 +319,17 @@ private:
             // clipping loop this compact delay otherwise reaches at maximum.
             delayFeedback_ = (y * 3400) >> 12;
             if (newPress) {
-                RecordDelayTap(x);
+                if (tapCounter_ != 0 && samplesSinceTap_ > 240) {
+                    delayTargetSamples_ = samplesSinceTap_;
+                    tapTimeActive_ = true;
+                    tapTimeKnob_ = x;
+                }
+                // As on original Bib, a manual tap immediately clears the
+                // current quantisation. The next valid measured clock
+                // interval is allowed to enable it again.
+                clockSync_ = false;
+                samplesSinceTap_ = 0;
+                tapCounter_ = 1;
             }
             delaySamples_ = clockSync_ ? QuantiseToClock(delayTargetSamples_) : delayTargetSamples_;
             break;
@@ -388,42 +378,6 @@ private:
             lastClockSample_ = 0;
         }
 
-    }
-
-    void RecordDelayTap(int32_t x)
-    {
-        // Directly based on Bib's Spider tapography: the first tap starts a
-        // phrase; each following tap (within one second) becomes a relative
-        // delay head. Workshop's Z switch has no pressure value, so every
-        // recorded head uses unity level instead of Bib's pressure weighting.
-        constexpr uint32_t kTapPhraseTimeout = 48000;
-        if (tapSequenceStartSample_ == 0 ||
-            sampleCounter_ - lastTapSample_ > kTapPhraseTimeout) {
-            tapSequenceStartSample_ = sampleCounter_;
-            recordedTapCount_ = 0;
-        } else if (recordedTapCount_ < 8) {
-            const uint32_t fullTime = sampleCounter_ - tapSequenceStartSample_;
-            recordedTapOffsets_[recordedTapCount_++] = fullTime;
-
-            // The final tap defines the overall delay duration; earlier taps
-            // are stored as Q12 fractions of it, as in Bib's delay_tap_times.
-            delayTargetSamples_ = fullTime < 208 ? 208 :
-                (fullTime >= kDelaySize ? kDelaySize - 1 : fullTime);
-            for (uint8_t tap = 0; tap < recordedTapCount_; ++tap) {
-                const uint64_t ratio = (static_cast<uint64_t>(recordedTapOffsets_[tap]) << 12) /
-                    fullTime;
-                delayTapTimesQ12_[tap] = static_cast<uint16_t>(ratio > 4096 ? 4096 : ratio);
-                delayTapLevelsQ12_[tap] = 4096;
-            }
-            delayTapCount_ = recordedTapCount_;
-            tapTimeActive_ = true;
-            tapTimeKnob_ = x;
-        }
-
-        lastTapSample_ = sampleCounter_;
-        // A manual Spider/Z rhythm clears the current clock grid. As on Bib,
-        // the next valid external interval may quantise it again.
-        clockSync_ = false;
     }
 
     uint32_t QuantiseToClock(uint32_t target) const
