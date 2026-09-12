@@ -38,7 +38,7 @@ between pages.
   tap sets the overall delay length. Workshop's Z has no pressure sensing, so
   all recorded heads have equal level. Two taps make the familiar single
   tap-tempo repeat. After tapping, make a substantial turn of X to return to
-  manual time control.
+  manual time control and clear the recorded pattern back to one even repeat.
 
 Pulse In 1 is an external delay clock. After two valid rising edges 50 ms to
 2 s apart, Bib measures their interval and uses the original Bib quantiser:

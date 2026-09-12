@@ -332,11 +332,6 @@ private:
             // 4.3 ms to 341 ms: long enough for slap, echo and short loops.
             // A tapped time stays active until X is deliberately moved.
             if (!tapTimeActive_ || Abs(x - tapTimeKnob_) > 512) {
-                // A deliberate X move leaves the recorded tapography and
-                // restores Bib's ordinary single/even repeat. Keeping the
-                // earlier recorded heads here made a "manual" long delay
-                // still sound fast, because its short relative taps remained.
-                if (tapTimeActive_ && delayTapCount_ != 1) ResetDelayTaps();
                 tapTimeActive_ = false;
                 delayTargetSamples_ = 208 + static_cast<uint32_t>((x * (kDelaySize - 209)) >> 12);
             }
@@ -429,16 +424,6 @@ private:
         // A manual Spider/Z rhythm clears the current clock grid. As on Bib,
         // the next valid external interval may quantise it again.
         clockSync_ = false;
-    }
-
-    void ResetDelayTaps()
-    {
-        delayTapCount_ = 1;
-        delayTapTimesQ12_[0] = 4096;
-        delayTapLevelsQ12_[0] = 4096;
-        recordedTapCount_ = 0;
-        tapSequenceStartSample_ = 0;
-        lastTapSample_ = 0;
     }
 
     uint32_t QuantiseToClock(uint32_t target) const
