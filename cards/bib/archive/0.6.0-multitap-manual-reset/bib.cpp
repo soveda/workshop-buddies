@@ -22,7 +22,6 @@ constexpr int32_t kFull = 4095;
 constexpr uint32_t kDelaySize = 32768; // power of two: 683 ms at 48 kHz
 constexpr uint32_t kDelayMask = kDelaySize - 1;
 constexpr uint32_t kDelayPositionMask = (kDelaySize << 8) - 1;
-constexpr uint32_t kMaxDelaySamples = 96000; // original Bib's ~2 second range
 // Bib accepts clocks from 50 ms to 2 s. The delay buffer is shorter than the
 // original's tape-scaled maximum, but its quantiser can still use divisions of
 // a clock period longer than the physical buffer.
@@ -152,15 +151,7 @@ public:
         // deliberate tape-style pitch movement while removing stepped jumps.
         const int32_t delayTargetQ8 = static_cast<int32_t>(delaySamples_ << 8);
         delayTimeQ8_ += (delayTargetQ8 - delayTimeQ8_) >> 7;
-        const uint32_t requestedDelayQ8 = static_cast<uint32_t>(delayTimeQ8_);
-        // Bib extends its delay past the physical tape length by slowing the
-        // tape down. Keep the read distance within RAM, while the matching
-        // transport scale below preserves the requested musical duration.
-        const uint32_t delayTimeQ8 = requestedDelayQ8 > (kDelayMask << 8)
-            ? (kDelayMask << 8) : requestedDelayQ8;
-        automaticTapeScaleQ16_ = requestedDelayQ8 > delayTimeQ8
-            ? static_cast<uint32_t>((static_cast<uint64_t>(delayTimeQ8) << 16) / requestedDelayQ8)
-            : 65536;
+        const uint32_t delayTimeQ8 = static_cast<uint32_t>(delayTimeQ8_);
         // Bib's Spider can record up to eight relative tap positions. Their
         // sum forms the audible multi-tap return; only the final tap returns
         // to the feedback path, exactly as in the original DSP.
@@ -268,7 +259,6 @@ private:
     PagePickup pickup_;
     uint32_t transportQ16_ = 65536;
     int32_t tapeSpeedSmoothQ16_ = 65536;
-    uint32_t automaticTapeScaleQ16_ = 65536;
     uint16_t wowPhase_ = 0;
     int32_t wobbleDepth_ = 0;
     bool tapTimeActive_ = false;
@@ -339,8 +329,7 @@ private:
                 tapTimeKnob_ = x;
                 clockHandoff_ = false;
             }
-            // 4.3 ms to about 2 s, using Bib's automatic tape slowdown once
-            // the requested time exceeds the physical 32k-sample tape.
+            // 4.3 ms to 341 ms: long enough for slap, echo and short loops.
             // A tapped time stays active until X is deliberately moved.
             if (!tapTimeActive_ || Abs(x - tapTimeKnob_) > 512) {
                 // A deliberate X move leaves the recorded tapography and
@@ -349,7 +338,7 @@ private:
                 // still sound fast, because its short relative taps remained.
                 if (tapTimeActive_ && delayTapCount_ != 1) ResetDelayTaps();
                 tapTimeActive_ = false;
-                delayTargetSamples_ = 208 + static_cast<uint32_t>((x * (kMaxDelaySamples - 209)) >> 12);
+                delayTargetSamples_ = 208 + static_cast<uint32_t>((x * (kDelaySize - 209)) >> 12);
             }
             // Leave enough feedback for long repeats, but below the hard
             // clipping loop this compact delay otherwise reaches at maximum.
@@ -424,7 +413,7 @@ private:
             // The final tap defines the overall delay duration; earlier taps
             // are stored as Q12 fractions of it, as in Bib's delay_tap_times.
             delayTargetSamples_ = fullTime < 208 ? 208 :
-                (fullTime >= kMaxDelaySamples ? kMaxDelaySamples - 1 : fullTime);
+                (fullTime >= kDelaySize ? kDelaySize - 1 : fullTime);
             for (uint8_t tap = 0; tap < recordedTapCount_; ++tap) {
                 const uint64_t ratio = (static_cast<uint64_t>(recordedTapOffsets_[tap]) << 12) /
                     fullTime;
@@ -476,9 +465,10 @@ private:
             uint32_t distance = 0xffffffffu;
             const uint64_t candidates[] = {below, period, dotted};
             for (uint64_t candidate : candidates) {
-                // Long times are represented by Bib-style automatic tape
-                // slowdown, so retain all candidates in its ~2 second range.
-                if (candidate < 208 || candidate >= kMaxDelaySamples) continue;
+                // The Workshop's fixed 32k tape cannot read a longer delay,
+                // so reject only out-of-buffer options; neighbouring octave
+                // divisions remain valid just as on the original Bib.
+                if (candidate < 208 || candidate >= kDelaySize) continue;
                 const uint32_t value = static_cast<uint32_t>(candidate);
                 const uint32_t difference = value > target ? value - target : target - value;
                 if (difference < distance) {
@@ -537,8 +527,7 @@ private:
         int32_t triangle = wowPhase_ < 32768 ? wowPhase_ : 65535 - wowPhase_;
         triangle = (triangle << 1) - 32768; // signed Q15, -32768..32766
 
-        int32_t speed = static_cast<int32_t>((static_cast<uint64_t>(transportQ16_) *
-            automaticTapeScaleQ16_) >> 16);
+        int32_t speed = static_cast<int32_t>(transportQ16_);
         // Split the Q12 × Q15 modulation before multiplying by transport so
         // this remains safely within fast 32-bit RP2040 arithmetic.
         const int32_t wobble = (wobbleDepth_ * triangle) >> 13;

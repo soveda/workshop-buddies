@@ -39,6 +39,8 @@ between pages.
   all recorded heads have equal level. Two taps make the familiar single
   tap-tempo repeat. After tapping, make a substantial turn of X to return to
   manual time control and clear the recorded pattern back to one even repeat.
+  X reaches approximately two seconds: longer times use Bib's automatic tape
+  slowdown while retaining the fixed 32k-sample tape buffer.
 
 Pulse In 1 is an external delay clock. After two valid rising edges 50 ms to
 2 s apart, Bib measures their interval and uses the original Bib quantiser:
