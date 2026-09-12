@@ -138,9 +138,14 @@ public:
         const int32_t drivenL = Shape(inL, drive_);
         const int32_t drivenR = Shape(inR, drive_);
 
-        const uint32_t read = (write_ - delaySamples_) & kDelayMask;
-        const int32_t delayedL = delayLeft[read];
-        const int32_t delayedR = delayRight[read];
+        const uint32_t readL = (write_ - delaySamples_) & kDelayMask;
+        // Bib's negative delay-send side uses a different right-hand delay
+        // length.  That asymmetry turns the usual stereo repeat into the
+        // distinct, moving ping-pong character of the original card.
+        const uint32_t rightTime = pingPong_ ? ((delaySamples_ * 3) >> 2) : delaySamples_;
+        const uint32_t readR = (write_ - rightTime) & kDelayMask;
+        const int32_t delayedL = delayLeft[readL];
+        const int32_t delayedR = delayRight[readR];
 
         // Freeze stops new material entering, but the feedback path remains
         // alive.  It is the familiar "hold the dub" gesture from Bib.
@@ -150,10 +155,12 @@ public:
         // made the previous version's wet signal disappear at ordinary
         // feedback settings, which is not a useful dub freeze.
         const int32_t writeFeedback = freeze_ ? 3900 : delayFeedback_;
+        const int32_t feedbackL = pingPong_ ? delayedR : delayedL;
+        const int32_t feedbackR = pingPong_ ? delayedL : delayedR;
         const int16_t writeL = static_cast<int16_t>(DelaySoftLimit(
-            ((drivenL * inputSend) + (delayedR * writeFeedback)) >> 12));
+            ((drivenL * inputSend) + (feedbackL * writeFeedback)) >> 12));
         const int16_t writeR = static_cast<int16_t>(DelaySoftLimit(
-            ((drivenR * inputSend) + (delayedL * writeFeedback)) >> 12));
+            ((drivenR * inputSend) + (feedbackR * writeFeedback)) >> 12));
         const uint32_t advances = AdvanceTape();
         // At normal speed this writes once.  Below normal it occasionally
         // holds a tape position; above normal it duplicates a sample into
@@ -183,6 +190,7 @@ private:
     uint32_t tapCounter_ = 0;
     uint32_t samplesSinceTap_ = 0;
     uint32_t delaySamples_ = 8192;
+    uint32_t delayTargetSamples_ = 8192;
     int32_t drive_ = 2048;
     int32_t delaySend_ = 2048;
     int32_t delayFeedback_ = 2500;
@@ -193,6 +201,7 @@ private:
     bool wavefold_ = false;
     bool freeze_ = false;
     bool shimmer_ = false;
+    bool pingPong_ = false;
     uint16_t combAPos_ = 0;
     uint16_t combBPos_ = 0;
     uint16_t diffuserPos_ = 0;
@@ -204,9 +213,15 @@ private:
     bool tapTimeActive_ = false;
     int32_t tapTimeKnob_ = 0;
     uint32_t ledPhase_ = 0;
+    uint32_t sampleCounter_ = 0;
+    uint32_t lastClockSample_ = 0;
+    uint32_t clockPeriod_ = 0;
+    bool clockSync_ = false;
+    bool clockSuppressed_ = false;
 
     void UpdateControls(uint8_t mode, int32_t x, int32_t y, bool pressed, bool tapePage)
     {
+        UpdateClock();
         // Count in samples so a pair of Z presses in delay mode becomes a
         // reliable, tempo-like tap time without timers or floating point.
         if (samplesSinceTap_ < kDelaySize - 1) ++samplesSinceTap_;
@@ -229,32 +244,42 @@ private:
         }
 
         switch (mode) {
-        case 0:
+        case 0: {
             drive_ = x;
-            // Bib's send taper leaves useful headroom at ordinary settings;
-            // the final part of the turn is reserved for deliberate overload.
-            delaySend_ = (y * y) >> 12;
+            // The original delay-send pot is bipolar: its centre is off,
+            // positive travel feeds normal stereo delay, and negative travel
+            // selects a 3:4 ping-pong relationship between the channels.
+            const int32_t send = y - 2048;
+            pingPong_ = send < 0;
+            const int32_t magnitude = Abs(send);
+            delaySend_ = (magnitude * magnitude) >> 10;
             if (newPress) wavefold_ = !wavefold_;
             break;
+        }
         case 1:
             // 4.3 ms to 341 ms: long enough for slap, echo and short loops.
             // A tapped time stays active until X is deliberately moved.
             if (!tapTimeActive_ || Abs(x - tapTimeKnob_) > 512) {
                 tapTimeActive_ = false;
-                delaySamples_ = 208 + static_cast<uint32_t>((x * (kDelaySize - 209)) >> 12);
+                delayTargetSamples_ = 208 + static_cast<uint32_t>((x * (kDelaySize - 209)) >> 12);
             }
             // Leave enough feedback for long repeats, but below the hard
             // clipping loop this compact delay otherwise reaches at maximum.
             delayFeedback_ = (y * 3400) >> 12;
             if (newPress) {
                 if (tapCounter_ != 0 && samplesSinceTap_ > 240) {
-                    delaySamples_ = samplesSinceTap_;
+                    delayTargetSamples_ = samplesSinceTap_;
                     tapTimeActive_ = true;
                     tapTimeKnob_ = x;
                 }
+                // As on original Bib, a manual tap takes priority over a
+                // remembered external clock until that clock disappears.
+                clockSync_ = false;
+                clockSuppressed_ = true;
                 samplesSinceTap_ = 0;
                 tapCounter_ = 1;
             }
+            delaySamples_ = clockSync_ ? QuantiseToClock(delayTargetSamples_) : delayTargetSamples_;
             break;
         case 2:
             reverbSend_ = x;
@@ -267,6 +292,49 @@ private:
             freeze_ = pressed;
             break;
         }
+    }
+
+    void UpdateClock()
+    {
+        ++sampleCounter_;
+        if (PulseIn1RisingEdge()) {
+            if (lastClockSample_ != 0) {
+                const uint32_t interval = sampleCounter_ - lastClockSample_;
+                // 5 ms avoids switch/noise glitches; the buffer length is
+                // the maximum directly useful interval on this compact port.
+                if (interval >= 240 && interval < kDelaySize && !clockSuppressed_) {
+                    clockPeriod_ = interval;
+                    clockSync_ = true;
+                }
+            }
+            lastClockSample_ = sampleCounter_;
+        }
+
+        // Unplugging/stopping a clock arms automatic detection again.  Until
+        // then a Z tap deliberately keeps its manually tapped tempo.
+        if (clockSuppressed_ && sampleCounter_ - lastClockSample_ > kDelaySize) {
+            clockSuppressed_ = false;
+            lastClockSample_ = 0;
+        }
+    }
+
+    uint32_t QuantiseToClock(uint32_t target) const
+    {
+        const uint32_t candidates[] = {
+            clockPeriod_ >> 1, clockPeriod_, clockPeriod_ + (clockPeriod_ >> 1),
+            clockPeriod_ << 1
+        };
+        uint32_t closest = target;
+        uint32_t distance = 0xffffffffu;
+        for (uint32_t candidate : candidates) {
+            if (candidate < 208 || candidate >= kDelaySize) continue;
+            const uint32_t difference = candidate > target ? candidate - target : target - candidate;
+            if (difference < distance) {
+                distance = difference;
+                closest = candidate;
+            }
+        }
+        return closest;
     }
 
     uint32_t AdvanceTape()

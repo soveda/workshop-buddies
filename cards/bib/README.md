@@ -28,11 +28,17 @@ between pages.
 
 ## Modes
 
-- Mode 0 (Main fully counter-clockwise): X = drive; Y = delay send; Z tap
-  toggles between overdrive and wavefold.
+- Mode 0 (Main fully counter-clockwise): X = drive; Y = bipolar delay send:
+  centre is off, clockwise is normal stereo delay, and counter-clockwise is
+  3:4 ping-pong delay. Z tap toggles between overdrive and wavefold.
 - Mode 1: X = delay time; Y = feedback; Z tap sets delay time from the
   interval between two taps. After tapping, make a substantial turn of X to
   return to manual time control.
+
+Pulse In 1 is an external delay clock. After two valid rising edges, Bib
+snaps the selected delay time to the nearest half, whole, dotted, or double
+clock division. A Z tap returns to manual tap tempo; clock detection is armed
+again after the clock stops or is unplugged.
 - Mode 2: X = reverb send; Y = reverb decay; hold Z for a brighter,
   shimmer-like feedback colour. This is intentionally not a pitch shifter.
 - Mode 3 (Main fully clockwise): X = wet/dry mix; Y = output level; hold Z
