@@ -1,6 +1,7 @@
 # Bib for Workshop Computer
 
-**Status: first playable firmware implementation; not yet hardware tested.**
+**Status: hardware-tested playable firmware; current build includes the first
+direct port of Bib's fractional tape-delay core.**
 
 This is a Bib-inspired stereo delay and reverb card for the Music Thing
 Workshop Computer. It translates Bib's touch-first interface into the
@@ -80,8 +81,11 @@ The resulting UF2 is `build/bib_workshop.uf2`.
 
 The original Bib's 32k-sample stereo delay and reverb engine are designed for a
 different block-audio hardware environment. This version uses a 32k-sample
-stereo delay and directly adapts Bib's original fixed-point modulated reverb
-tank, including damping, limiter, modulation, and shimmer. The reverb retains
+stereo delay and now directly adapts Bib's Q8 interpolated read heads and
+fractional tape writer, so slowed, sped-up, and wobbled transport moves
+smoothly between delay samples. It also directly adapts Bib's original
+fixed-point modulated reverb tank, including damping, limiter, modulation, and
+shimmer. The reverb retains
 its original every-two-samples cadence, with interpolation back to the
 Workshop Computer's 48 kHz output. The design remains a Workshop control/UI
 adaptation, not a one-to-one port of the original hardware.

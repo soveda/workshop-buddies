@@ -21,6 +21,7 @@ namespace
 constexpr int32_t kFull = 4095;
 constexpr uint32_t kDelaySize = 32768; // power of two: 683 ms at 48 kHz
 constexpr uint32_t kDelayMask = kDelaySize - 1;
+constexpr uint32_t kDelayPositionMask = (kDelaySize << 8) - 1;
 
 static int16_t delayLeft[kDelaySize] = {};
 static int16_t delayRight[kDelaySize] = {};
@@ -137,14 +138,18 @@ public:
         const int32_t drivenL = Shape(inL, drive_);
         const int32_t drivenR = Shape(inR, drive_);
 
-        const uint32_t readL = (write_ - delaySamples_) & kDelayMask;
+        // This is the original Bib delay's Q8 tape position scheme.  It
+        // permits continuously moving read heads when the tape transport is
+        // slowed, sped up or wobbled, rather than jumping between samples.
+        const uint32_t delayTimeQ8 = delaySamples_ << 8;
+        const uint32_t readL = (delayPositionQ8_ - delayTimeQ8) & kDelayPositionMask;
         // Bib's negative delay-send side uses a different right-hand delay
         // length.  That asymmetry turns the usual stereo repeat into the
         // distinct, moving ping-pong character of the original card.
-        const uint32_t rightTime = pingPong_ ? ((delaySamples_ * 3) >> 2) : delaySamples_;
-        const uint32_t readR = (write_ - rightTime) & kDelayMask;
-        const int32_t delayedL = delayLeft[readL];
-        const int32_t delayedR = delayRight[readR];
+        const uint32_t rightTimeQ8 = pingPong_ ? ((delayTimeQ8 * 3) >> 2) : delayTimeQ8;
+        const uint32_t readR = (delayPositionQ8_ - rightTimeQ8) & kDelayPositionMask;
+        const int32_t delayedL = ReadDelay(delayLeft, readL);
+        const int32_t delayedR = ReadDelay(delayRight, readR);
 
         // Freeze stops new material entering, but the feedback path remains
         // alive.  It is the familiar "hold the dub" gesture from Bib.
@@ -160,16 +165,7 @@ public:
             ((drivenL * inputSend) + (feedbackL * writeFeedback)) >> 12));
         const int16_t writeR = static_cast<int16_t>(DelaySoftLimit(
             ((drivenR * inputSend) + (feedbackR * writeFeedback)) >> 12));
-        const uint32_t advances = AdvanceTape();
-        // At normal speed this writes once.  Below normal it occasionally
-        // holds a tape position; above normal it duplicates a sample into
-        // consecutive positions.  That is a cheap, intentional tape-style
-        // pitch bend with no floating point or resampling buffer.
-        for (uint32_t i = 0; i < advances; ++i) {
-            delayLeft[write_] = writeL;
-            delayRight[write_] = writeR;
-            write_ = (write_ + 1) & kDelayMask;
-        }
+        WriteDelay(writeL, writeR, TapeSpeedQ8());
 
         int32_t reverbL = 0;
         int32_t reverbR = 0;
@@ -187,7 +183,12 @@ public:
     }
 
 private:
-    uint32_t write_ = 0;
+    // The accumulated values are the original Bib writer's anti-gap method:
+    // at fractional tape speeds, a tape cell receives the time-weighted
+    // contribution of all input samples that passed beneath the write head.
+    uint32_t delayPositionQ8_ = 0;
+    int32_t delayWriteAccumL_ = 0;
+    int32_t delayWriteAccumR_ = 0;
     uint32_t tapCounter_ = 0;
     uint32_t samplesSinceTap_ = 0;
     uint32_t delaySamples_ = 8192;
@@ -207,7 +208,6 @@ private:
     bool pingPong_ = false;
     PagePickup pickup_;
     uint32_t transportQ16_ = 65536;
-    uint32_t transportRemainder_ = 0;
     uint16_t wowPhase_ = 0;
     int32_t wobbleDepth_ = 0;
     bool tapTimeActive_ = false;
@@ -352,7 +352,44 @@ private:
         return closest;
     }
 
-    uint32_t AdvanceTape()
+    int32_t ReadDelay(const int16_t *buffer, uint32_t positionQ8) const
+    {
+        const uint32_t index = (positionQ8 >> 8) & kDelayMask;
+        const int32_t first = buffer[index];
+        const int32_t next = buffer[(index + 1) & kDelayMask];
+        const int32_t fraction = positionQ8 & 255u;
+        return first + (((next - first) * fraction) >> 8);
+    }
+
+    void WriteDelay(int16_t left, int16_t right, uint32_t speedQ8)
+    {
+        // Directly adapted from Bib's fractional tape writer.  Keep the
+        // unwrapped new position until the end so a write that crosses the
+        // ring boundary distributes correctly into each crossed tape cell.
+        uint32_t oldPosition = delayPositionQ8_;
+        uint32_t oldIndex = (oldPosition >> 8) & kDelayMask;
+        const uint32_t newPosition = oldPosition + speedQ8;
+        const uint32_t finalIndex = (newPosition >> 8) & kDelayMask;
+
+        while (oldIndex != finalIndex) {
+            const uint32_t amount = 256u - (oldPosition & 255u);
+            delayWriteAccumL_ += static_cast<int32_t>(amount) * left;
+            delayWriteAccumR_ += static_cast<int32_t>(amount) * right;
+            delayLeft[oldIndex] = static_cast<int16_t>(DelaySoftLimit(delayWriteAccumL_ >> 8));
+            delayRight[oldIndex] = static_cast<int16_t>(DelaySoftLimit(delayWriteAccumR_ >> 8));
+            delayWriteAccumL_ = 0;
+            delayWriteAccumR_ = 0;
+            oldPosition += amount;
+            oldIndex = (oldIndex + 1) & kDelayMask;
+        }
+
+        const uint32_t amount = newPosition - oldPosition;
+        delayWriteAccumL_ += static_cast<int32_t>(amount) * left;
+        delayWriteAccumR_ += static_cast<int32_t>(amount) * right;
+        delayPositionQ8_ = newPosition & kDelayPositionMask;
+    }
+
+    uint32_t TapeSpeedQ8()
     {
         // A triangle LFO is enough to make a controllable tape wobble.  Its
         // 1.5 Hz rate is deliberately slow: it feels like a moving tape reel
@@ -369,10 +406,7 @@ private:
         if (speed < 0) speed = 0;
         if (speed > 131072) speed = 131072; // do not exceed 2x transport
 
-        transportRemainder_ += static_cast<uint32_t>(speed);
-        const uint32_t advances = transportRemainder_ >> 16;
-        transportRemainder_ &= 0xffff;
-        return advances;
+        return static_cast<uint32_t>(speed) >> 8;
     }
 
     void UpdateLeds(uint8_t mode)
