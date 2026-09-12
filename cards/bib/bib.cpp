@@ -73,7 +73,7 @@ private:
     int32_t values_[2][4][2] = {
         { // Middle: the four main sound pages.
             {2048, 2048}, // drive, delay send
-            {2022, 2560}, // delay time, feedback
+            {1004, 2560}, // delay time, feedback
             {1500, 1966}, // reverb send, decay
             {2048, 2731}, // mix, output level
         },
