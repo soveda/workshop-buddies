@@ -31,7 +31,8 @@ between pages.
 - Mode 0 (Main fully counter-clockwise): X = drive; Y = delay send; Z tap
   toggles between overdrive and wavefold.
 - Mode 1: X = delay time; Y = feedback; Z tap sets delay time from the
-  interval between two taps.
+  interval between two taps. After tapping, make a substantial turn of X to
+  return to manual time control.
 - Mode 2: X = reverb send; Y = reverb decay; hold Z for a brighter,
   shimmer-like feedback colour. This is intentionally not a pitch shifter.
 - Mode 3 (Main fully clockwise): X = wet/dry mix; Y = output level; hold Z
@@ -64,7 +65,7 @@ The resulting UF2 is `build/bib_workshop.uf2`.
 ## Implementation notes
 
 The original Bib's 32k-sample stereo delay and reverb engine are designed for a
-different block-audio hardware environment. This version uses a 16k-sample
+different block-audio hardware environment. This version uses a 32k-sample
 stereo delay plus a small, fixed-point comb/allpass reverb. That fits safely
 alongside a copy-to-RAM Workshop build and keeps every `ProcessSample()` call
 small. The design is a starting point for listening tests, not a one-to-one

@@ -13,7 +13,7 @@
 namespace
 {
 constexpr int32_t kFull = 4095;
-constexpr uint32_t kDelaySize = 16384; // power of two: 341 ms at 48 kHz
+constexpr uint32_t kDelaySize = 32768; // power of two: 683 ms at 48 kHz
 constexpr uint32_t kDelayMask = kDelaySize - 1;
 
 // These are deliberately modest.  Together with the main delay they leave
@@ -130,10 +130,15 @@ public:
         // Freeze stops new material entering, but the feedback path remains
         // alive.  It is the familiar "hold the dub" gesture from Bib.
         const int32_t inputSend = freeze_ ? 0 : delaySend_;
+        // Freeze preserves the material already circulating in the delay by
+        // raising its feedback as it closes the input.  Simply muting input
+        // made the previous version's wet signal disappear at ordinary
+        // feedback settings, which is not a useful dub freeze.
+        const int32_t writeFeedback = freeze_ ? 3900 : delayFeedback_;
         const int16_t writeL = static_cast<int16_t>(ClampAudio(
-            ((drivenL * inputSend) + (delayedR * delayFeedback_)) >> 12));
+            ((drivenL * inputSend) + (delayedR * writeFeedback)) >> 12));
         const int16_t writeR = static_cast<int16_t>(ClampAudio(
-            ((drivenR * inputSend) + (delayedL * delayFeedback_)) >> 12));
+            ((drivenR * inputSend) + (delayedL * writeFeedback)) >> 12));
         const uint32_t advances = AdvanceTape();
         // At normal speed this writes once.  Below normal it occasionally
         // holds a tape position; above normal it duplicates a sample into
@@ -217,7 +222,7 @@ private:
         case 1:
             // 4.3 ms to 341 ms: long enough for slap, echo and short loops.
             // A tapped time stays active until X is deliberately moved.
-            if (!tapTimeActive_ || Abs(x - tapTimeKnob_) > 64) {
+            if (!tapTimeActive_ || Abs(x - tapTimeKnob_) > 512) {
                 tapTimeActive_ = false;
                 delaySamples_ = 208 + static_cast<uint32_t>((x * (kDelaySize - 209)) >> 12);
             }
@@ -320,7 +325,7 @@ private:
         // the documentation as a colour rather than an octave effect.
         // A small cross term gives brightness without adding enough gain to
         // make the two combs self-oscillate when Z is held for shimmer.
-        const int32_t colour = shimmer ? ((a - b) >> 6) : 0;
+        const int32_t colour = shimmer ? ((a - b) >> 5) : 0;
         combA[combAPos_] = static_cast<int16_t>(ClampAudio(input + ((a * feedback) >> 12) + colour));
         combB[combBPos_] = static_cast<int16_t>(ClampAudio(input + ((b * feedback) >> 12) - colour));
         if (++combAPos_ == kCombA) combAPos_ = 0;
