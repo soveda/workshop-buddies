@@ -37,6 +37,21 @@ static inline int32_t ClampAudio(int32_t value)
 
 static inline int32_t Abs(int32_t value) { return value < 0 ? -value : value; }
 
+// The delay's 16-bit storage has only 12-bit audio headroom once input and
+// feedback are summed.  A soft knee avoids the brittle hard clipping that is
+// especially obvious when fast notes overlap several repeats.
+static inline int32_t DelaySoftLimit(int32_t value)
+{
+    const int32_t sign = value < 0 ? -1 : 1;
+    int32_t magnitude = value < 0 ? -value : value;
+    constexpr int32_t kKnee = 1536;
+    if (magnitude > kKnee) {
+        magnitude = kKnee + ((magnitude - kKnee) >> 3);
+        if (magnitude > 2047) magnitude = 2047;
+    }
+    return sign * magnitude;
+}
+
 // Each page remembers its two parameter positions.  When a page is entered,
 // its controls wait until the physical pot reaches the saved position before
 // taking over.  This is the same "pickup" behaviour as the original Bib's
@@ -135,9 +150,9 @@ public:
         // made the previous version's wet signal disappear at ordinary
         // feedback settings, which is not a useful dub freeze.
         const int32_t writeFeedback = freeze_ ? 3900 : delayFeedback_;
-        const int16_t writeL = static_cast<int16_t>(ClampAudio(
+        const int16_t writeL = static_cast<int16_t>(DelaySoftLimit(
             ((drivenL * inputSend) + (delayedR * writeFeedback)) >> 12));
-        const int16_t writeR = static_cast<int16_t>(ClampAudio(
+        const int16_t writeR = static_cast<int16_t>(DelaySoftLimit(
             ((drivenR * inputSend) + (delayedL * writeFeedback)) >> 12));
         const uint32_t advances = AdvanceTape();
         // At normal speed this writes once.  Below normal it occasionally
@@ -216,7 +231,9 @@ private:
         switch (mode) {
         case 0:
             drive_ = x;
-            delaySend_ = y;
+            // Bib's send taper leaves useful headroom at ordinary settings;
+            // the final part of the turn is reserved for deliberate overload.
+            delaySend_ = (y * y) >> 12;
             if (newPress) wavefold_ = !wavefold_;
             break;
         case 1:
