@@ -40,10 +40,10 @@ Pulse In 1 is an external delay clock. After two valid rising edges 50 ms to
 2 s apart, Bib measures their interval and uses the original Bib quantiser:
 X still selects the desired delay range, but its time snaps to the nearest
 3/4, straight, or dotted division of a suitable octave of that clock. A Z tap
-returns to manual tap tempo; clock detection is armed again after the clock
-stops or is unplugged. On clock loss, the last synced repeat time is held until
-X is deliberately moved, avoiding an audible jump back to the physical pot
-position.
+immediately clears quantisation for manual tap tempo; as on original Bib, the
+next valid incoming clock interval enables quantisation again. On clock loss,
+the last synced repeat time is held until X is deliberately moved, avoiding an
+audible jump back to the physical pot position.
 - Mode 2: X = reverb send; Y = reverb decay.
 - Mode 3 (Main fully clockwise): X = wet/dry mix; Y = output level; hold Z
   to freeze the delay input for dub-style looping.

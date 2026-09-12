@@ -245,6 +245,7 @@ private:
     uint32_t lastClockSample_ = 0;
     uint32_t clockPeriod_ = 0;
     bool clockSync_ = false;
+    bool clockSuppressed_ = false;
     bool clockHandoff_ = false;
     int32_t reverbPendingL_ = 0;
     int32_t reverbPendingR_ = 0;
@@ -324,10 +325,10 @@ private:
                     tapTimeActive_ = true;
                     tapTimeKnob_ = x;
                 }
-                // As on original Bib, a manual tap immediately clears the
-                // current quantisation. The next valid measured clock
-                // interval is allowed to enable it again.
+                // As on original Bib, a manual tap takes priority over a
+                // remembered external clock until that clock disappears.
                 clockSync_ = false;
+                clockSuppressed_ = true;
                 samplesSinceTap_ = 0;
                 tapCounter_ = 1;
             }
@@ -359,7 +360,8 @@ private:
                 // established tempo with an implausibly different period.
                 const bool plausible = !clockSync_ ||
                     (interval >= (clockPeriod_ >> 1) && interval <= (clockPeriod_ << 1));
-                if (interval >= kMinClockPeriod && interval < kMaxClockPeriod && plausible) {
+                if (interval >= kMinClockPeriod && interval < kMaxClockPeriod &&
+                    plausible && !clockSuppressed_) {
                     clockPeriod_ = interval;
                     clockSync_ = true;
                 }
@@ -378,6 +380,12 @@ private:
             lastClockSample_ = 0;
         }
 
+        // Unplugging/stopping a clock arms automatic detection again.  Until
+        // then a Z tap deliberately keeps its manually tapped tempo.
+        if (clockSuppressed_ && sampleCounter_ - lastClockSample_ > kDelaySize) {
+            clockSuppressed_ = false;
+            lastClockSample_ = 0;
+        }
     }
 
     uint32_t QuantiseToClock(uint32_t target) const
