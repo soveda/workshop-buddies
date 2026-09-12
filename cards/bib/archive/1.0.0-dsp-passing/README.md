@@ -16,22 +16,16 @@ The card uses the bundled `ComputerCard.h` **v0.3.0** (12 May 2026).
 - X/Y: the two controls for that mode
 - Z down: tap, toggle, hold, or freeze according to the mode
 - LEDs 0–1: binary mode page (`off/off`, `on/off`, `off/on`, `on/on`)
-- LEDs 2–5: live, page-specific parameter/status display
-- CV In 1 / CV In 2: bipolar modulation of the active page's X / Y parameter
+- LEDs 2–5: persistent level indicators for drive, delay feedback, reverb
+  decay, and wet mix respectively
 
-LEDs 2 and 3 show the effective X and Y values after CV modulation. LEDs 4
-and 5 show page-specific state: Drive = wavefold and ping-pong; Delay = clock
-lock and multi-tap count; Reverb = shimmer and wet mix; Mix = freeze and output
-limiter reduction. On the Reverb Up page, LED 2 shows shimmer and LED 3 shows
-decay. On the Delay Up page, LEDs 2 and 3 show tape speed and wobble.
+LED 2 is steady for overdrive and gently pulses for wavefold; in both cases
+its brightness still tracks drive level.
 
 When you change Main page, X and Y use **pot pickup**. A control does not
 change its newly selected parameter until the physical pot reaches that
 parameter's saved position. This prevents abrupt sound changes when moving
 between pages.
-
-CV is summed after pot pickup: a centred pot plus CV gives bipolar movement,
-and patching/unpatching CV does not change the physical pot's pickup state.
 
 ## Modes
 

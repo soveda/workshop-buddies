@@ -40,12 +40,6 @@ static inline int32_t ClampAudio(int32_t value)
 }
 
 static inline int32_t Abs(int32_t value) { return value < 0 ? -value : value; }
-static inline int32_t ClampParameter(int32_t value)
-{
-    if (value < 0) return 0;
-    if (value > kFull) return kFull;
-    return value;
-}
 
 // The delay's 16-bit storage has only 12-bit audio headroom once input and
 // feedback are summed.  A soft knee avoids the brittle hard clipping that is
@@ -134,14 +128,12 @@ public:
         const bool tapePage = detailPage && mode == 1;
         const bool reverbPage = detailPage && mode == 2;
         pickup_.Select(mode, detailPage);
-        // Pickup follows the physical pot; bipolar CV is added afterwards so
-        // patching modulation never steals or jumps a stored pot position.
-        const int32_t x = ClampParameter(pickup_.Update(0, KnobVal(Knob::X)) + CVIn1());
-        const int32_t y = ClampParameter(pickup_.Update(1, KnobVal(Knob::Y)) + CVIn2());
+        const int32_t x = pickup_.Update(0, KnobVal(Knob::X));
+        const int32_t y = pickup_.Update(1, KnobVal(Knob::Y));
         const bool pressed = SwitchVal() == Switch::Down;
 
         UpdateControls(mode, x, y, pressed, tapePage, reverbPage);
-        UpdateLeds(mode, x, y, tapePage, reverbPage);
+        UpdateLeds(mode);
 
         int32_t inL = AudioIn1();
         // A mono source patched into Audio 1 stays centred when Audio 2 is
@@ -569,7 +561,7 @@ private:
         return static_cast<uint32_t>(tapeSpeedSmoothQ16_) >> 8;
     }
 
-    void UpdateLeds(uint8_t mode, int32_t x, int32_t y, bool tapePage, bool reverbPage)
+    void UpdateLeds(uint8_t mode)
     {
         // LEDs 0 and 1 form a small binary page display.  This leaves the
         // other four LEDs free to show the useful, persistent effect levels:
@@ -579,39 +571,23 @@ private:
         LedOn(0, (mode & 1u) != 0);
         LedOn(1, (mode & 2u) != 0);
 
-        // LEDs 2--5 are a live page display. LEDs 2/3 always show the
-        // effective X/Y values, including CV; the remaining pair exposes the
-        // page's useful state rather than hiding it behind a menu.
-        switch (mode) {
-        case 0:
-            LedBrightness(2, static_cast<uint16_t>(x));
-            LedBrightness(3, static_cast<uint16_t>(Abs(y - 2048) << 1));
-            LedOn(4, wavefold_);
-            LedOn(5, pingPong_);
-            break;
-        case 1:
-            LedBrightness(2, static_cast<uint16_t>(x));
-            LedBrightness(3, static_cast<uint16_t>(y));
-            if (tapePage) {
-                LedBrightness(2, static_cast<uint16_t>(x));
-                LedBrightness(3, static_cast<uint16_t>(y));
-            }
-            LedOn(4, clockSync_);
-            LedBrightness(5, static_cast<uint16_t>((delayTapCount_ * kFull) / 8));
-            break;
-        case 2:
-            LedBrightness(2, static_cast<uint16_t>(reverbPage ? shimmerAmount_ : x));
-            LedBrightness(3, static_cast<uint16_t>(reverbPage ? reverbFeedback_ : y));
-            LedBrightness(4, static_cast<uint16_t>(shimmerAmount_));
-            LedBrightness(5, static_cast<uint16_t>(mix_));
-            break;
-        default:
-            LedBrightness(2, static_cast<uint16_t>(x));
-            LedBrightness(3, static_cast<uint16_t>(y));
-            LedOn(4, freeze_);
-            LedBrightness(5, static_cast<uint16_t>(kFull - outputLimiterQ12_));
-            break;
+        // The remaining LEDs describe the sound, rather than whichever page
+        // happens to be selected: drive, delay feedback, reverb decay, then
+        // wet mix.  Their levels remain visible while adjusting any page.
+        ++ledPhase_;
+        if (wavefold_) {
+            // LED 2 keeps showing drive level, but its gentle breathing makes
+            // wavefold visibly distinct from the steady overdrive state.
+            const uint32_t phase = (ledPhase_ >> 8) & 255u;
+            const int32_t triangle = phase < 128 ? phase : 255 - phase;
+            const int32_t brightness = (drive_ * (2048 + (triangle << 4))) >> 12;
+            LedBrightness(2, static_cast<uint16_t>(brightness));
+        } else {
+            LedBrightness(2, static_cast<uint16_t>(drive_));
         }
+        LedBrightness(3, static_cast<uint16_t>(delayFeedback_));
+        LedBrightness(4, static_cast<uint16_t>(reverbFeedback_));
+        LedBrightness(5, static_cast<uint16_t>(mix_));
     }
 
     int32_t DriveOversampled(int32_t input, int32_t previous, int32_t drive) const
