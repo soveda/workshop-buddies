@@ -39,7 +39,9 @@ between pages.
 Pulse In 1 is an external delay clock. After two valid rising edges, Bib
 snaps the selected delay time to the nearest half, whole, dotted, or double
 clock division. A Z tap returns to manual tap tempo; clock detection is armed
-again after the clock stops or is unplugged.
+again after the clock stops or is unplugged. On clock loss, the last synced
+repeat time is held until X is deliberately moved, avoiding an audible jump
+back to the physical pot position.
 - Mode 2: X = reverb send; Y = reverb decay.
 - Mode 3 (Main fully clockwise): X = wet/dry mix; Y = output level; hold Z
   to freeze the delay input for dub-style looping.
@@ -89,6 +91,10 @@ shimmer. The reverb retains
 its original every-two-samples cadence, with interpolation back to the
 Workshop Computer's 48 kHz output. The design remains a Workshop control/UI
 adaptation, not a one-to-one port of the original hardware.
+
+The reverb send retains Bib's quadratic response, with a soft limiting knee in
+only its final control range to keep dense transient material clean at maximum
+send.
 
 The card runs the Workshop Computer at **192 MHz**. This provides headroom for
 the Bib DSP and is an alias-safe clock for `ComputerCard.h` v0.3.0's CV PWM.

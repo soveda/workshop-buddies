@@ -218,6 +218,7 @@ private:
     uint32_t clockPeriod_ = 0;
     bool clockSync_ = false;
     bool clockSuppressed_ = false;
+    bool clockHandoff_ = false;
     int32_t reverbPendingL_ = 0;
     int32_t reverbPendingR_ = 0;
     int32_t reverbPreviousL_ = 0;
@@ -273,6 +274,14 @@ private:
             break;
         }
         case 1:
+            // When a patched clock disappears, retain the last clocked time
+            // until X is deliberately moved.  Jumping straight back to the
+            // physical X position was audible as a short, low "blurp".
+            if (clockHandoff_) {
+                tapTimeActive_ = true;
+                tapTimeKnob_ = x;
+                clockHandoff_ = false;
+            }
             // 4.3 ms to 341 ms: long enough for slap, echo and short loops.
             // A tapped time stays active until X is deliberately moved.
             if (!tapTimeActive_ || Abs(x - tapTimeKnob_) > 512) {
@@ -317,12 +326,28 @@ private:
                 const uint32_t interval = sampleCounter_ - lastClockSample_;
                 // 5 ms avoids switch/noise glitches; the buffer length is
                 // the maximum directly useful interval on this compact port.
-                if (interval >= 240 && interval < kDelaySize && !clockSuppressed_) {
+                // A cable can generate a short spurious edge as it is
+                // removed. Do not let that single edge replace an already
+                // established tempo with an implausibly different period.
+                const bool plausible = !clockSync_ ||
+                    (interval >= (clockPeriod_ >> 1) && interval <= (clockPeriod_ << 1));
+                if (interval >= 240 && interval < kDelaySize && plausible && !clockSuppressed_) {
                     clockPeriod_ = interval;
                     clockSync_ = true;
                 }
             }
             lastClockSample_ = sampleCounter_;
+        }
+
+        // On clock loss, hold the final synchronised time rather than
+        // reverting to X mid-repeat. This makes disconnecting a clock a
+        // transparent handoff to the manual/tap time control.
+        if (clockSync_ && lastClockSample_ != 0 &&
+            sampleCounter_ - lastClockSample_ > (clockPeriod_ << 1)) {
+            clockSync_ = false;
+            delayTargetSamples_ = delaySamples_;
+            clockHandoff_ = true;
+            lastClockSample_ = 0;
         }
 
         // Unplugging/stopping a clock arms automatic detection again.  Until
@@ -468,7 +493,11 @@ private:
         reverbOddSample_ = false;
         const int32_t sourceL = (reverbPendingL_ + inputL) >> 1;
         const int32_t sourceR = (reverbPendingR_ + inputR) >> 1;
-        const int32_t taperedSend = (send * send) >> 13;
+        int32_t taperedSend = (send * send) >> 13;
+        // Preserve the original quadratic send response through most of the
+        // control range, but soften its final extreme. At maximum this tank
+        // otherwise receives enough dense input to crackle on transients.
+        if (taperedSend > 1400) taperedSend = 1400 + ((taperedSend - 1400) >> 3);
         const int32_t inputScaleL = ((sourceL << 4) * taperedSend) >> 12;
         const int32_t inputScaleR = ((sourceR << 4) * taperedSend) >> 12;
 
