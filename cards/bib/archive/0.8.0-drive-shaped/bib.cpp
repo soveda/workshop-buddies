@@ -587,11 +587,7 @@ private:
     {
         int32_t gainQ12;
         if (drive < 2048) {
-            // Concave low-range taper: silence exists only at the physical
-            // end-stop, while the region below unity remains usefully loud.
-            // This restores the original card's playable drive range without
-            // sacrificing the high-drive curve above centre.
-            gainQ12 = (drive << 2) - ((drive * drive) >> 11);
+            gainQ12 = drive << 1;
         } else {
             const int32_t aboveUnity = drive - 2048;
             gainQ12 = 4096 + aboveUnity * 6 + ((aboveUnity * aboveUnity) >> 8);
