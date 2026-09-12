@@ -39,8 +39,7 @@ Pulse In 1 is an external delay clock. After two valid rising edges, Bib
 snaps the selected delay time to the nearest half, whole, dotted, or double
 clock division. A Z tap returns to manual tap tempo; clock detection is armed
 again after the clock stops or is unplugged.
-- Mode 2: X = reverb send; Y = reverb decay; hold Z for a brighter,
-  shimmer-like feedback colour. This is intentionally not a pitch shifter.
+- Mode 2: X = reverb send; Y = reverb decay.
 - Mode 3 (Main fully clockwise): X = wet/dry mix; Y = output level; hold Z
   to freeze the delay input for dub-style looping.
 
@@ -56,6 +55,15 @@ the delay's transport speed: counter-clockwise slows continuously to a stop,
 wow/flutter depth around that speed (up to approximately ±25%). Return the switch to Middle for normal
 delay time, feedback, and Z tap-tempo operation. Both tape controls use pot
 pickup independently of the normal Delay page.
+
+### Reverb shimmer page (Switch Up)
+
+On Mode 2 only, the latching Up position makes X a persistent shimmer amount:
+counter-clockwise is off and clockwise increases the original Bib reverb
+tank's shimmer feedback. Return to Middle for reverb send and decay. Like
+Bib's pressure-set spider control, the chosen shimmer amount remains active
+after returning to Middle and across later mode changes; Y is reserved for a
+future reverb detail control.
 
 ## Build
 

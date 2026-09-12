@@ -89,10 +89,10 @@ private:
             {1500, 1966}, // reverb send, decay
             {2048, 2731}, // mix, output level
         },
-        { // Up: currently used by the Delay tape page.
+        { // Up: Delay tape and Reverb shimmer detail pages.
             {2048, 2048},
             {2048,    0}, // normal transport speed, no wobble
-            {1500, 1966},
+            {1024, 1966}, // original Bib's default shimmer, reserved Y
             {2048, 2731},
         },
     };
@@ -113,17 +113,19 @@ public:
         // regions.  The LEDs show the selected region continuously.
         const int32_t main = KnobVal(Knob::Main);
         const uint8_t mode = static_cast<uint8_t>((main * 4) >> 12);
-        // Up is a latching secondary layer.  At present it belongs to the
-        // delay page, where it becomes a tape-transport page.  The other
+        // Up is a latching secondary layer: Delay becomes tape transport and
+        // Reverb becomes the persistent shimmer-setting page. The other two
         // pages retain their main controls until their own Up functions are
         // designed.
-        const bool tapePage = SwitchVal() == Switch::Up && mode == 1;
-        pickup_.Select(mode, tapePage);
+        const bool detailPage = SwitchVal() == Switch::Up && (mode == 1 || mode == 2);
+        const bool tapePage = detailPage && mode == 1;
+        const bool reverbPage = detailPage && mode == 2;
+        pickup_.Select(mode, detailPage);
         const int32_t x = pickup_.Update(0, KnobVal(Knob::X));
         const int32_t y = pickup_.Update(1, KnobVal(Knob::Y));
         const bool pressed = SwitchVal() == Switch::Down;
 
-        UpdateControls(mode, x, y, pressed, tapePage);
+        UpdateControls(mode, x, y, pressed, tapePage, reverbPage);
         UpdateLeds(mode);
 
         int32_t inL = AudioIn1();
@@ -172,7 +174,7 @@ public:
         int32_t reverbL = 0;
         int32_t reverbR = 0;
         OriginalBibReverb(drivenL + delayedL, drivenR + delayedR,
-                          reverbSend_, reverbFeedback_, shimmer_, reverbL, reverbR);
+                          reverbSend_, reverbFeedback_, shimmerAmount_, reverbL, reverbR);
         const int32_t wetL = delayedL + reverbL;
         const int32_t wetR = delayedR + reverbR;
 
@@ -199,7 +201,9 @@ private:
     int32_t outputLevel_ = 3072;
     bool wavefold_ = false;
     bool freeze_ = false;
-    bool shimmer_ = false;
+    // Original Bib starts with a subtle shimmer setting and changes it only
+    // when the player makes another deliberate pressure gesture.
+    int32_t shimmerAmount_ = 1024;
     bool pingPong_ = false;
     PagePickup pickup_;
     uint32_t transportQ16_ = 65536;
@@ -222,7 +226,8 @@ private:
     int32_t reverbCurrentR_ = 0;
     bool reverbOddSample_ = false;
 
-    void UpdateControls(uint8_t mode, int32_t x, int32_t y, bool pressed, bool tapePage)
+    void UpdateControls(uint8_t mode, int32_t x, int32_t y, bool pressed,
+                        bool tapePage, bool reverbPage)
     {
         UpdateClock();
         // Count in samples so a pair of Z presses in delay mode becomes a
@@ -232,7 +237,6 @@ private:
         wasPressed_ = pressed;
 
         freeze_ = false;
-        shimmer_ = false;
         transportQ16_ = 65536;
         wobbleDepth_ = 0;
 
@@ -243,6 +247,15 @@ private:
             transportQ16_ = static_cast<uint32_t>(x) << 5;
             // Full CW is deliberately restrained to a ±25% speed swing.
             wobbleDepth_ = (y * 1024) >> 12;
+            return;
+        }
+
+        if (reverbPage) {
+            // The original spider's hold pressure set a persistent shimmer
+            // amount. X is its direct Workshop equivalent; switching back to
+            // Middle leaves the chosen amount in place. Y is reserved for a
+            // future original-style reverb extension.
+            shimmerAmount_ = x;
             return;
         }
 
@@ -287,7 +300,6 @@ private:
         case 2:
             reverbSend_ = x;
             reverbFeedback_ = 1400 + ((y * 1800) >> 12);
-            shimmer_ = pressed;
             break;
         default:
             mix_ = x;
@@ -405,7 +417,7 @@ private:
     }
 
     void OriginalBibReverb(int32_t inputL, int32_t inputR, int32_t send,
-                           int32_t feedback, bool shimmer,
+                           int32_t feedback, int32_t shimmerAmount,
                            int32_t &outL, int32_t &outR)
     {
         // Original Bib runs this reverb once per two stereo samples.  Buffer
@@ -432,11 +444,10 @@ private:
         decay = (decay * decay) >> 12;
         decay = (decay * decay) >> 12;
         decay = 4096 - decay;
-        // Bib derives shimmer gain from a pressure value. Workshop Z has no
-        // pressure, so its held state represents a firm press (6144 in the
-        // original call's doubled pressure scale), while retaining Bib's
-        // feedback-dependent safety scaling.
-        shimmer_am_q12 = shimmer ? ((6144 * 800) / (feedback + 1024)) : 0;
+        // Bib passes twice its stored 0..4096 pressure-derived shimmer value
+        // into the tank. Preserve that gain relationship for the Workshop
+        // Up-page control, including the original feedback safety scaling.
+        shimmer_am_q12 = ((shimmerAmount * 2 * 800) / (feedback + 1024));
 
         int wetL = 0;
         int wetR = 0;
