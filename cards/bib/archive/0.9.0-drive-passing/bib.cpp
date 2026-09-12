@@ -141,13 +141,8 @@ public:
         // possible without guessing from signal level.
         int32_t inR = Connected(Input::Audio2) ? AudioIn2() : inL;
 
-        // Bib shapes at an oversampled rate, then decimates before feeding
-        // its delay. A midpoint plus endpoint approximation supplies the
-        // same alias-reduction idea within the Workshop sample interrupt.
-        const int32_t drivenL = DriveOversampled(inL, previousInputL_, drive_);
-        const int32_t drivenR = DriveOversampled(inR, previousInputR_, drive_);
-        previousInputL_ = inL;
-        previousInputR_ = inR;
+        const int32_t drivenL = Shape(inL, drive_);
+        const int32_t drivenR = Shape(inR, drive_);
 
         // This is the original Bib delay's Q8 tape position scheme.  It
         // permits continuously moving read heads when the tape transport is
@@ -234,7 +229,8 @@ public:
         // changing the mix does not create a sudden gain jump.
         const int32_t outL = (((drivenL * (kFull - mix_)) + (wetL * mix_)) >> 12);
         const int32_t outR = (((drivenR * (kFull - mix_)) + (wetR * mix_)) >> 12);
-        OutputWithLimiter(outL, outR);
+        AudioOut1(ClampAudio((outL * outputLevel_) >> 12));
+        AudioOut2(ClampAudio((outR * outputLevel_) >> 12));
     }
 
 private:
@@ -290,9 +286,6 @@ private:
     int32_t reverbCurrentL_ = 0;
     int32_t reverbCurrentR_ = 0;
     bool reverbOddSample_ = false;
-    int32_t previousInputL_ = 0;
-    int32_t previousInputR_ = 0;
-    int32_t outputLimiterQ12_ = 4096;
 
     void UpdateControls(uint8_t mode, int32_t x, int32_t y, bool pressed,
                         bool tapePage, bool reverbPage)
@@ -590,11 +583,6 @@ private:
         LedBrightness(5, static_cast<uint16_t>(mix_));
     }
 
-    int32_t DriveOversampled(int32_t input, int32_t previous, int32_t drive) const
-    {
-        return (Shape((input + previous) >> 1, drive) + Shape(input, drive)) >> 1;
-    }
-
     int32_t Shape(int32_t input, int32_t drive) const
     {
         int32_t gainQ12;
@@ -623,22 +611,6 @@ private:
         const int32_t sign = input < 0 ? -1 : 1;
         const int32_t magnitude = Abs(input);
         return sign * ((magnitude * 4096) / (4096 + magnitude));
-    }
-
-    void OutputWithLimiter(int32_t left, int32_t right)
-    {
-        const int32_t rawL = (left * outputLevel_) >> 12;
-        const int32_t rawR = (right * outputLevel_) >> 12;
-        const int32_t peak = Abs(rawL) > Abs(rawR) ? Abs(rawL) : Abs(rawR);
-        const int32_t target = peak > 1900 ? (1900 * 4096) / peak : 4096;
-        // Bib's output protection catches overload rapidly and releases much
-        // more slowly, avoiding hard clipping and audible gain pumping.
-        if (target < outputLimiterQ12_)
-            outputLimiterQ12_ += (target - outputLimiterQ12_) >> 3;
-        else
-            outputLimiterQ12_ += (target - outputLimiterQ12_) >> 12;
-        AudioOut1(ClampAudio((rawL * outputLimiterQ12_) >> 12));
-        AudioOut2(ClampAudio((rawR * outputLimiterQ12_) >> 12));
     }
 
     void OriginalBibReverb(int32_t inputL, int32_t inputR, int32_t send,
