@@ -585,28 +585,14 @@ private:
 
     int32_t Shape(int32_t input, int32_t drive) const
     {
-        int32_t gainQ12;
-        if (drive < 2048) {
-            gainQ12 = drive << 1;
-        } else {
-            const int32_t aboveUnity = drive - 2048;
-            gainQ12 = 4096 + aboveUnity * 6 + ((aboveUnity * aboveUnity) >> 8);
-        }
-        const int32_t amplified = (input * gainQ12) >> 12;
-        if (!wavefold_) return SoftDriveClip(amplified);
+        const int32_t amplified = (input * (1024 + drive)) >> 11;
+        if (!wavefold_) return ClampAudio(amplified);
 
         // Triangle folding is a cheap, intentionally rough alternative to
         // overdrive; it retains Bib's two distinct drive colours.
         int32_t folded = (amplified + 2048) & 8191;
         if (folded > 4095) folded = 8191 - folded;
         return folded - 2048;
-    }
-
-    int32_t SoftDriveClip(int32_t input) const
-    {
-        const int32_t sign = input < 0 ? -1 : 1;
-        const int32_t magnitude = Abs(input);
-        return sign * ((magnitude * 4096) / (4096 + magnitude));
     }
 
     void OriginalBibReverb(int32_t inputL, int32_t inputR, int32_t send,
