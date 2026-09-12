@@ -141,12 +141,7 @@ public:
         // This is the original Bib delay's Q8 tape position scheme.  It
         // permits continuously moving read heads when the tape transport is
         // slowed, sped up or wobbled, rather than jumping between samples.
-        // Bib smooths its delay-time control before it reaches the read
-        // heads. At the per-sample Workshop rate, a 1/128 slew preserves
-        // deliberate tape-style pitch movement while removing stepped jumps.
-        const int32_t delayTargetQ8 = static_cast<int32_t>(delaySamples_ << 8);
-        delayTimeQ8_ += (delayTargetQ8 - delayTimeQ8_) >> 7;
-        const uint32_t delayTimeQ8 = static_cast<uint32_t>(delayTimeQ8_);
+        const uint32_t delayTimeQ8 = delaySamples_ << 8;
         const uint32_t readL = (delayPositionQ8_ - delayTimeQ8) & kDelayPositionMask;
         // Bib's negative delay-send side uses a different right-hand delay
         // length.  That asymmetry turns the usual stereo repeat into the
@@ -164,27 +159,13 @@ public:
         // made the previous version's wet signal disappear at ordinary
         // feedback settings, which is not a useful dub freeze.
         const int32_t writeFeedback = freeze_ ? 3900 : delayFeedback_;
-        // Directly preserve Bib's 144-degree feedback rotation. Ping-pong
-        // remains the original card's asymmetric right-hand read time, not a
-        // simple channel swap, so the repeat image keeps moving in stereo.
-        constexpr int32_t kFeedbackCosQ12 = -3314;
-        constexpr int32_t kFeedbackSinQ12 = 2408;
-        const int32_t feedbackCos = (kFeedbackCosQ12 * writeFeedback) >> 12;
-        const int32_t feedbackSin = (kFeedbackSinQ12 * writeFeedback) >> 12;
-        const int32_t feedbackL = ((delayedL * feedbackCos) - (delayedR * feedbackSin)) >> 12;
-        const int32_t feedbackR = ((delayedL * feedbackSin) + (delayedR * feedbackCos)) >> 12;
-        int32_t writeL = ((drivenL * inputSend) >> 12) + feedbackL;
-        int32_t writeR = ((drivenR * inputSend) >> 12) + feedbackR;
-        // The original delay writer removes accumulated DC before recording
-        // to tape. This prevents a long feedback run from drifting the
-        // fractional writer toward one polarity.
-        delayDcL_ += ((writeL << 8) - delayDcL_) >> 11;
-        delayDcR_ += ((writeR << 8) - delayDcR_) >> 11;
-        writeL -= delayDcL_ >> 8;
-        writeR -= delayDcR_ >> 8;
-        const int16_t limitedWriteL = static_cast<int16_t>(DelaySoftLimit(writeL));
-        const int16_t limitedWriteR = static_cast<int16_t>(DelaySoftLimit(writeR));
-        WriteDelay(limitedWriteL, limitedWriteR, TapeSpeedQ8());
+        const int32_t feedbackL = pingPong_ ? delayedR : delayedL;
+        const int32_t feedbackR = pingPong_ ? delayedL : delayedR;
+        const int16_t writeL = static_cast<int16_t>(DelaySoftLimit(
+            ((drivenL * inputSend) + (feedbackL * writeFeedback)) >> 12));
+        const int16_t writeR = static_cast<int16_t>(DelaySoftLimit(
+            ((drivenR * inputSend) + (feedbackR * writeFeedback)) >> 12));
+        WriteDelay(writeL, writeR, TapeSpeedQ8());
 
         int32_t reverbL = 0;
         int32_t reverbR = 0;
@@ -208,9 +189,6 @@ private:
     uint32_t delayPositionQ8_ = 0;
     int32_t delayWriteAccumL_ = 0;
     int32_t delayWriteAccumR_ = 0;
-    int32_t delayTimeQ8_ = 8192 << 8;
-    int32_t delayDcL_ = 0;
-    int32_t delayDcR_ = 0;
     uint32_t tapCounter_ = 0;
     uint32_t samplesSinceTap_ = 0;
     uint32_t delaySamples_ = 8192;
@@ -230,7 +208,6 @@ private:
     bool pingPong_ = false;
     PagePickup pickup_;
     uint32_t transportQ16_ = 65536;
-    int32_t tapeSpeedSmoothQ16_ = 65536;
     uint16_t wowPhase_ = 0;
     int32_t wobbleDepth_ = 0;
     bool tapTimeActive_ = false;
@@ -454,12 +431,7 @@ private:
         if (speed < 0) speed = 0;
         if (speed > 131072) speed = 131072; // do not exceed 2x transport
 
-        // The original Bib smooths tape transport before the Q8 writer. The
-        // same one-pole response removes control zippering without making a
-        // deliberate stop or speed gesture feel sluggish.
-        tapeSpeedSmoothQ16_ += (speed - tapeSpeedSmoothQ16_) >> 7;
-        if (tapeSpeedSmoothQ16_ < 0) tapeSpeedSmoothQ16_ = 0;
-        return static_cast<uint32_t>(tapeSpeedSmoothQ16_) >> 8;
+        return static_cast<uint32_t>(speed) >> 8;
     }
 
     void UpdateLeds(uint8_t mode)

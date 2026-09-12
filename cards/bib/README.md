@@ -1,7 +1,7 @@
 # Bib for Workshop Computer
 
-**Status: hardware-tested playable firmware; current build includes the first
-direct port of Bib's fractional tape-delay core.**
+**Status: second-pass delay firmware awaiting focused hardware test. The prior
+hardware-passing first-pass build is archived in `archive/0.1.0-first-pass-delay/`.**
 
 This is a Bib-inspired stereo delay and reverb card for the Music Thing
 Workshop Computer. It translates Bib's touch-first interface into the
@@ -85,7 +85,9 @@ The original Bib's 32k-sample stereo delay and reverb engine are designed for a
 different block-audio hardware environment. This version uses a 32k-sample
 stereo delay and now directly adapts Bib's Q8 interpolated read heads and
 fractional tape writer, so slowed, sped-up, and wobbled transport moves
-smoothly between delay samples. It also directly adapts Bib's original
+smoothly between delay samples. The current second pass adds Bib's smoothed
+delay-time and tape-speed controls, 144-degree stereo feedback rotation, and
+delay-write DC blocking. It also directly adapts Bib's original
 fixed-point modulated reverb tank, including damping, limiter, modulation, and
 shimmer. The reverb retains
 its original every-two-samples cadence, with interpolation back to the
@@ -95,6 +97,12 @@ adaptation, not a one-to-one port of the original hardware.
 The reverb send retains Bib's quadratic response, with a soft limiting knee in
 only its final control range to keep dense transient material clean at maximum
 send.
+
+## Fallback
+
+`archive/0.1.0-first-pass-delay/` contains the complete source and UF2 for the
+last full hardware-passing revision, plus its checksum. It is a direct fallback
+if this second-pass delay behaviour is not preferred.
 
 The card runs the Workshop Computer at **192 MHz**. This provides headroom for
 the Bib DSP and is an alias-safe clock for `ComputerCard.h` v0.3.0's CV PWM.
