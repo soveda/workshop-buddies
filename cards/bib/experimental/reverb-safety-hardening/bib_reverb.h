@@ -14,6 +14,28 @@ static int damp2 = 0;
 static int reverbdc = 0;
 ///////////////////////////////////////////
 
+// The original tank assumes its wider block-DSP signal range.  On the
+// Workshop's per-sample renderer, bound state at each nonlinear boundary so a
+// pathological feedback transient cannot cause signed-integer overflow.
+constexpr int kReverbAccumulatorLimit = 65535;
+constexpr int kReverbDampLimit = kReverbAccumulatorLimit << 8;
+
+static inline int clamp_reverb_accumulator(int value) {
+  if (value > kReverbAccumulatorLimit)
+    return kReverbAccumulatorLimit;
+  if (value < -kReverbAccumulatorLimit)
+    return -kReverbAccumulatorLimit;
+  return value;
+}
+
+static inline int clamp_reverb_damp(int value) {
+  if (value > kReverbDampLimit)
+    return kReverbDampLimit;
+  if (value < -kReverbDampLimit)
+    return -kReverbDampLimit;
+  return value;
+}
+
 static inline void update_lfo(int *state, int freq) { // quadrature oscillator magic
   state[0] -= (state[1] * freq) >> 19;
   state[1] += (state[0] * freq) >> 19;
@@ -36,6 +58,10 @@ static inline int softcube(int x) {
 }
 #define SATURATE16(x) ((x > 32767) ? 32767 : (x < -32768) ? -32768 : x)
 #define SATURATE16_SOFT(x) (x - softcube(x))
+static inline short softclip_reverb_to_i16(int value) {
+  const int safe_value = clamp_reverb_accumulator(value);
+  return static_cast<short>(SATURATE16_SOFT(safe_value));
+}
 #ifdef WASMxxx
 #define LOG_CLIP(x)                                                                                                    \
   if (x < -32768 || x >= 32767)                                                                                        \
@@ -71,7 +97,7 @@ static inline int softcube(int x) {
     int jhalf = (i + len / 2) & 32767;                                                                                 \
     int j = (i + len + 2048) & 32767;                                                                                  \
     LOG_CLIP(acc);                                                                                                     \
-    reverbbuf[i] = SATURATE16_SOFT(acc);                                                                               \
+    reverbbuf[i] = softclip_reverb_to_i16(acc);                                                                        \
     acc = reverbbuf[jhalf];                                                                                            \
     i = j;                                                                                                             \
   }
@@ -81,7 +107,7 @@ static inline int softcube(int x) {
     int wobpos_q8 = (lfo_q25 + (1 << 25) + (1 << 13)) >> 12;                                                           \
     int j = ((i + (len) / 2) << 8) - wobpos_q8;                                                                        \
     LOG_CLIP(acc);                                                                                                     \
-    reverbbuf[i] = SATURATE16_SOFT(acc);                                                                               \
+    reverbbuf[i] = softclip_reverb_to_i16(acc);                                                                        \
     acc = read_buf_interp(reverbbuf, j);                                                                               \
     i = (i + (len)) & 32767;                                                                                           \
   }
@@ -93,8 +119,12 @@ static inline int softcube(int x) {
 
 #define DECAY() acc = SAFEMUL(acc, reverb_decay_q12, 12);
 #define DAMP(dampvar)                                                                                                  \
-  dampvar += (((acc << 8) - dampvar) * 5) >> 3;                                                                        \
-  acc = dampvar >> 8;
+  {                                                                                                                    \
+    const int damp_target = clamp_reverb_accumulator(acc) << 8;                                                       \
+    dampvar += ((damp_target - dampvar) * 5) >> 3;                                                                     \
+    dampvar = clamp_reverb_damp(dampvar);                                                                              \
+    acc = dampvar >> 8;                                                                                                 \
+  }
 #define TAP(pos) reverbbuf[(i + pos) & 32767]
 
 #define SHIMMERUPDATE()                                                                                                \
@@ -197,12 +227,14 @@ static inline void do_reverb(int reverbinl, int reverbinr, int reverb_decay_q12,
   // update_limiter(&reverb_limiter, accsig, accsig);
   // acc = (saturate((acc * 3) / 2) * 2) / 3;
   // final highpass to stop it getting too muddy
-  reverbdc += ((acc << 8) - reverbdc) >> 4;
+  acc = clamp_reverb_accumulator(acc);
+  const int dc_target = acc << 8;
+  reverbdc += (dc_target - reverbdc) >> 4;
+  reverbdc = clamp_reverb_damp(reverbdc);
   acc -= reverbdc >> 8;
+  acc = clamp_reverb_accumulator(acc);
   static int reverb_limiter = 0;
-  static int reverb_hold = 0;
-  int level = abs(acc);
-  level *= 256; // tune the threshold
+  const int level = abs(acc) * 256; // tune the threshold
   static int limit_hold = 0;
   static int limit_level = 32768 * 64;
   if (level > limit_level) {
@@ -226,10 +258,10 @@ static inline void do_reverb(int reverbinl, int reverbinr, int reverb_decay_q12,
   //   ev = 0;
   // }
   acc = (acc * 16384) / (limit_level / 128);
+  acc = clamp_reverb_accumulator(acc);
 
   if (level > reverb_limiter) {
     reverb_limiter = level;
-    reverb_hold = 200;
   }
 
   if (level)

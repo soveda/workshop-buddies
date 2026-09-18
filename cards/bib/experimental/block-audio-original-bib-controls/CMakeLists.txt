@@ -1,0 +1,20 @@
+cmake_minimum_required(VERSION 3.13)
+include(pico_sdk_import.cmake)
+
+project(workshop_block_audio_original_bib_controls_test C CXX ASM)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+pico_sdk_init()
+
+add_executable(workshop_block_audio_original_bib_controls_test main.cpp tanh_table.c)
+target_link_libraries(workshop_block_audio_original_bib_controls_test
+    pico_multicore pico_stdlib hardware_adc hardware_dma hardware_pwm hardware_spi)
+
+# The complete runtime is copied to RAM so flash-cache stalls cannot disturb
+# the sample service routine.
+pico_set_binary_type(workshop_block_audio_original_bib_controls_test copy_to_ram)
+pico_add_extra_outputs(workshop_block_audio_original_bib_controls_test)
+target_compile_definitions(workshop_block_audio_original_bib_controls_test PRIVATE PICO_XOSC_STARTUP_DELAY_MULTIPLIER=64)
+pico_enable_stdio_usb(workshop_block_audio_original_bib_controls_test 0)
+target_compile_options(workshop_block_audio_original_bib_controls_test PRIVATE -O3 -Wall -Wextra -Wdouble-promotion -Wfloat-conversion)
+target_link_options(workshop_block_audio_original_bib_controls_test PRIVATE -Wl,--print-memory-usage)
