@@ -2,7 +2,7 @@
 
 ## Plinky Synth Buddies / Bib
 
-This card directly adapts the Bib DSP, reverb, delay, and lookup-table source from [Buddies public](https://github.com/plinkysynth/buddies_public/tree/main/sw/src/bib), by Plinky Synth and contributors. Buddies software is MIT-licensed; see the [upstream licence](https://github.com/plinkysynth/buddies_public/blob/main/LICENSE.md).
+This card directly adapts the Bib DSP, reverb, delay, and lookup-table source from [Buddies public](https://github.com/plinkysynth/buddies_public/tree/main/sw/src/bib), by Plinky Synth and contributors. The upstream [licence](https://github.com/plinkysynth/buddies_public/blob/main/LICENSE.md) licenses Buddies software under MIT, logos and graphic design under CC BY-SA 4.0, and hardware design under CERN-OHL-P v2.
 
 No Buddies artwork, logos, panel graphics, documentation graphics, or hardware design are included in this repository.
 

@@ -54,7 +54,7 @@ The build creates `build/bib_workshop.uf2`.
 
 ## Attribution and licence
 
-The original Bib DSP, reverb, lookup tables, and delay behavior are adapted from the MIT-licensed [Buddies public repository](https://github.com/plinkysynth/buddies_public/tree/main/sw/src/bib). The Workshop transport borrows the hardware map, ADC correction, mux cadence, and DAC formatting from MIT-licensed [ComputerCard](https://github.com/TomWhitwell/Workshop_Computer/tree/main/Demonstrations%2BHelloWorlds/PicoSDK/ComputerCard).
+The original Bib DSP, reverb, lookup tables, and delay behavior are adapted from the software portion of the [Buddies public repository](https://github.com/plinkysynth/buddies_public/tree/main/sw/src/bib), which is MIT-licensed. The upstream repository separately licenses its logos, panel and other graphic design under CC BY-SA 4.0, and its hardware under CERN-OHL-P v2; none of those non-software materials are included here. The Workshop transport borrows the hardware map, ADC correction, mux cadence, and DAC formatting from MIT-licensed [ComputerCard](https://github.com/TomWhitwell/Workshop_Computer/tree/main/Demonstrations%2BHelloWorlds/PicoSDK/ComputerCard).
 
 The Workshop-specific DMA transport, block scheduler, control mapping, safety limits, pickup, CV/clock support, and tape-rate hand-off were written for this port. No original panel artwork, logos, or hardware design is included. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [LICENSE](LICENSE).
 
