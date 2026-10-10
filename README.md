@@ -16,7 +16,7 @@ Workshop Computer firmware cards adapted from, or inspired by, the open-source
 - [Bib / Bibesque](cards/bib/README.md): hardware-tested 1.1.2-beta stereo
   delay/reverb using original 64-frame DSP and a custom DMA block-audio runtime.
   Catalogue status remains Beta.
-- [Blueberry](cards/blueberry/README.md): hardware-tested 0.3.0 experimental
+- [Blueberry Smoothie (card 873)](cards/blueberry/README.md): hardware-tested 0.3.0 Beta
   quantised keyboard recorder with independent pitch/gate inputs and toggle recording.
 
 ## Porting Notes
@@ -64,7 +64,7 @@ Page controls:
 - Mix: X = wet/dry, Y = output level; Down holds dub feedback.
 - Delay with Up: X = tape rate, Y = wow/flutter.
 
-## Blueberry Mapping
+## Blueberry Smoothie Mapping
 
 - CV In 1: quantised pitch from one Workshop 4 Voltages output.
 - Pulse In 2: independent live gate from Slopes or an external source.

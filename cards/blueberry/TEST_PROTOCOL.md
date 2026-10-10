@@ -1,7 +1,8 @@
-# Workshop Blueberry 0.3.0 Test Protocol
+# Blueberry Smoothie 0.3.0 Test Protocol
 
 Status: user reports all 0.3.0 hardware tests passed on 2026-10-10. The passing
-hold-to-record 0.2.0 source and UF2 are preserved in `archive/0.2.0`.
+hold-to-record 0.2.0 source and UF2 are preserved in the
+[Workshop Buddies archive](https://github.com/soveda/workshop-buddies/tree/main/cards/blueberry/archive/0.2.0).
 
 ## Setup
 
@@ -13,7 +14,7 @@ hold-to-record 0.2.0 source and UF2 are preserved in `archive/0.2.0`.
    No special 4 Voltages selection, resting-voltage learning, or user
    calibration procedure is needed.
 
-Flash `uf2/workshop_blueberry_0.3.0.uf2` for these tests.
+Flash [Blueberry-Smoothie-0.3.0.uf2](uf2/Blueberry-Smoothie-0.3.0.uf2) for these tests.
 
 For Workshop-only audio, patch CV Out 1 to the top oscillator pitch input,
 its sine to Ring Mod upper input, and Pulse Out 1 to top Slopes input.
