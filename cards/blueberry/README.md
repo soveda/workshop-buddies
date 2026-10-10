@@ -1,7 +1,7 @@
 # Workshop Blueberry
 
-**Version 0.3.0 experimental firmware. Record-toggle change awaiting hardware
-validation.** Workshop Blueberry is a Blueberry-inspired,
+**Version 0.3.0 experimental firmware. Hardware test protocol passed on
+2026-10-10.** Workshop Blueberry is a Blueberry-inspired,
 monophonic quantised keyboard recorder for the Workshop Computer. Patch one
 output from the Workshop System's **4 Voltages** module to CV In 1. The card
 quantises its voltage to pitch. Pulse In 2 supplies an independent gate from
@@ -59,6 +59,9 @@ Turn oscillator FM down. Pulse In 1 remains an independent playback clock.
 | 3 | Pulse In 1 is patched. |
 | 4 | Gate is high. |
 | 5 | Current quantised pitch brightness. |
+
+LED 0 reports input calibration only, not CV output calibration. It can remain
+off on a Computer with calibrated outputs; no user calibration step is needed.
 
 ## Important Limits
 

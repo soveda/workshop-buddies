@@ -1,6 +1,6 @@
 # Workshop Blueberry 0.3.0 Test Protocol
 
-Status: record-toggle change awaiting hardware validation. The passing
+Status: user reports all 0.3.0 hardware tests passed on 2026-10-10. The passing
 hold-to-record 0.2.0 source and UF2 are preserved in `archive/0.2.0`.
 
 ## Setup
@@ -67,6 +67,8 @@ input, then Ring Mod output to Mix. Turn oscillator FM down.
 1. LED 0 reports whether existing factory/input calibration coefficients were
    loaded from EEPROM. It is informational only: there is nothing to learn
    or calibrate for this test, and either LED state should remain playable.
+   It does not report CV output calibration, so it can remain off on a
+   Computer with calibrated outputs.
 2. Check that a fixed CV In 1 voltage produces a stable quantised pitch.
 3. Leave a loop running for 15 minutes, then check recording and free play.
    Reset clears the loop. Timing is recorded at 1 ms resolution; sampled
