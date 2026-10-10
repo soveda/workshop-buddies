@@ -1,5 +1,9 @@
 # Workshop Blueberry 0.2.0 Test Protocol
 
+Result: all checks reported passing on the Workshop System on 2026-10-10.
+The tested firmware is `uf2/workshop_blueberry_0.2.0.uf2`; no firmware changes
+were made after this pass report.
+
 ## Setup
 
 1. Patch one **4 Voltages** output to **CV In 1**.
