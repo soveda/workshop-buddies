@@ -59,3 +59,10 @@ The original Bib DSP, reverb, lookup tables, and delay behavior are adapted from
 The Workshop-specific DMA transport, block scheduler, control mapping, safety limits, pickup, CV/clock support, and tape-rate hand-off were written for this port. No original panel artwork, logos, or hardware design is included. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [LICENSE](LICENSE).
 
 The previous `ComputerCard.h` release candidate is preserved in [`archive/1.0.0-computercard-rc1/`](archive/1.0.0-computercard-rc1/).
+
+## Clock fix test
+
+A separate [1.1.1-beta clock test](experimental/clock-reacquisition/README.md)
+fixes reacquisition after large clock-rate changes, including quarter notes
+to sixteenths. It includes a test UF2 and hardware protocol. The 1.1.0-beta
+release above remains the fallback until the new version passes hardware tests.
