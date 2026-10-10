@@ -1,6 +1,6 @@
-// Workshop Blueberry, first-pass Minimal Keyboard recorder.
+// Workshop Blueberry 0.2.0, CV keyboard and explicit gate recorder.
 //
-// Audio In 1 receives one output from the Workshop System's 4 Voltages
+// CV In 1 receives one output from the Workshop System's 4 Voltages
 // module. Its changing analogue value is treated as a small keyboard, then
 // quantised to a fixed major-pentatonic scale before being recorded or played.
 
@@ -26,16 +26,21 @@ public:
         AudioOut1(0);
         AudioOut2(0);
 
+        // Framework edge flags last one audio sample. Preserve them until
+        // the 1 kHz control tick, including short external gate triggers.
+        if (PulseIn1RisingEdge()) clockEdgePending_ = true;
+        if (Connected(Input::Pulse2) && PulseIn2()) gateHighSeen_ = true;
+
         if (++controlDivider_ != kControlDivider) return;
         controlDivider_ = 0;
         ControlTick();
+        clockEdgePending_ = false;
+        gateHighSeen_ = false;
     }
 
 private:
     static constexpr uint8_t kControlDivider = 48; // 1 kHz control/event rate.
     static constexpr uint16_t kMaximumEvents = 512;
-    static constexpr int32_t kKeyOnThresholdMv = 75;
-    static constexpr int32_t kKeyOffThresholdMv = 45;
     static constexpr int32_t kOutputMinimumMv = -6000;
     static constexpr int32_t kOutputMaximumMv = 6000;
 
@@ -57,12 +62,10 @@ private:
     uint16_t playIndex_ = 0;
     uint16_t playTicksRemaining_ = 0;
     uint8_t controlDivider_ = 0;
-    uint8_t baselineTicks_ = 0;
-    int32_t keyboardBaselineMv_ = 0;
-    int32_t baselineAccumulatorMv_ = 0;
     int8_t transposeNotches_ = 0;
     bool mainReady_ = false;
-    bool keyHeld_ = false;
+    bool clockEdgePending_ = false;
+    bool gateHighSeen_ = false;
     bool recording_ = false;
     bool hadLoop_ = false;
     Switch previousSwitch_ = Switch::Middle;
@@ -90,23 +93,22 @@ private:
     // downward. Preserve that compact, musically useful behaviour here.
     static int32_t BlueberryNotchesToMillivolts(int32_t notches)
     {
-        return (notches * 6 + (notches & 1)) * 100;
+        return (notches * 6 + (notches & 1)) * 1000 / 12;
     }
 
     // The first pass intentionally uses Blueberry's default major-pentatonic
-    // notes. The input is relative to the no-button voltage sampled at reset.
-    static int32_t QuantiseMajorPentatonic(int32_t relativeMv)
+    // notes at standard 1 V/oct. Pitch and note-off are independent inputs.
+    static int32_t QuantiseMajorPentatonic(int32_t inputMv)
     {
-        static constexpr int32_t degrees[] = {0, 200, 500, 700, 900};
+        static constexpr int32_t degrees[] = {0, 2, 5, 7, 9};
         int32_t nearest = 0;
         int32_t nearestDistance = 0x7fffffff;
         for (int32_t octave = -6; octave <= 6; ++octave)
         {
-            const int32_t octaveBase = octave * 1200;
             for (int32_t degree : degrees)
             {
-                const int32_t candidate = octaveBase + degree;
-                const int32_t distance = Abs(relativeMv - candidate);
+                const int32_t candidate = (octave * 12 + degree) * 1000 / 12;
+                const int32_t distance = Abs(inputMv - candidate);
                 if (distance < nearestDistance)
                 {
                     nearest = candidate;
@@ -144,18 +146,12 @@ private:
 
     NoteState LiveNote()
     {
-        // ComputerCard 0.4.0 converts Audio In 1 via its EEPROM calibration.
-        // Without it, the framework's documented approximate scaling is still
-        // suitable for a first test, but less repeatable between computers.
-        const int32_t keyboardMv = AudioIn1Millivolts();
-        const int32_t relativeMv = keyboardMv - keyboardBaselineMv_;
-        const int32_t threshold = keyHeld_ ? kKeyOffThresholdMv : kKeyOnThresholdMv;
-        keyHeld_ = Abs(relativeMv) >= threshold;
-
-        const int32_t quantisedMv = QuantiseMajorPentatonic(relativeMv);
+        const int32_t keyboardMv = Connected(Input::CV1) ? CVIn1Millivolts() : 0;
+        const int32_t quantisedMv = QuantiseMajorPentatonic(keyboardMv);
         const int32_t outputMv = Clamp(quantisedMv + BlueberryNotchesToMillivolts(transposeNotches_),
                                        kOutputMinimumMv, kOutputMaximumMv);
-        return {static_cast<int16_t>(outputMv), keyHeld_};
+        return {static_cast<int16_t>(outputMv),
+                Connected(Input::Pulse2) && (PulseIn2() || gateHighSeen_)};
     }
 
     void AppendEvent(NoteState state)
@@ -222,7 +218,7 @@ private:
         {
             // Blueberry's external clock advances one captured note event per
             // rising edge. Recorded timing is used only while unclocked.
-            if (PulseIn1RisingEdge()) AdvancePlayback();
+            if (clockEdgePending_) AdvancePlayback();
         }
         else
         {
@@ -257,22 +253,6 @@ private:
 
     void ControlTick()
     {
-        // Measure the resting 4 Voltages output after reset. Start with no
-        // button held. The saved baseline becomes the keyboard's note-off.
-        if (baselineTicks_ < 128)
-        {
-            baselineAccumulatorMv_ += AudioIn1Millivolts();
-            ++baselineTicks_;
-            if (baselineTicks_ == 128)
-            {
-                keyboardBaselineMv_ = baselineAccumulatorMv_ / baselineTicks_;
-            }
-            PulseOut1(false);
-            PulseOut2(false);
-            LedOn(0, (baselineTicks_ & 16) != 0);
-            return;
-        }
-
         UpdateTranspose(KnobVal(Knob::Main));
         const NoteState live = LiveNote();
         const Switch mode = SwitchVal();
@@ -309,4 +289,5 @@ int main()
 
     WorkshopBlueberry card;
     card.Run();
+    return 0;
 }

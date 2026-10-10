@@ -1,36 +1,58 @@
 # Workshop Blueberry
 
-**First-pass test firmware.** Workshop Blueberry is a Blueberry-inspired,
+**Version 0.2.0 experimental firmware.** Workshop Blueberry is a Blueberry-inspired,
 monophonic quantised keyboard recorder for the Workshop Computer. Patch one
-output from the Workshop System's **4 Voltages** module to Audio In 1. The card
-learns its no-button voltage after reset, then treats changing voltages from
-the four buttons and their combinations as a small musical keyboard.
+output from the Workshop System's **4 Voltages** module to CV In 1. The card
+quantises its voltage to pitch. Pulse In 2 supplies an independent gate from
+Slopes or an external gate/trigger. No resting-voltage learning is needed.
 
 This is a new Workshop implementation inspired by the original
 [Blueberry](https://github.com/plinkysynth/buddies_public/tree/main/sw/src/blueberry),
 not a direct firmware port.
 
-## First-Pass Behaviour
+## Behaviour
 
 | Control | Function |
 | --- | --- |
-| Audio In 1 | 4 Voltages keyboard input. Leave all buttons released during the first 128 ms after reset. |
+| CV In 1 | Pitch voltage from one 4 Voltages output, quantised to C major pentatonic at 1 V/oct. |
+| Pulse In 2 | Explicit live gate. Pitch changes do not create gates; no gate cable means gate off. |
 | Main | Blueberry-style persistent transposition. Turn past 3 o'clock for one upward notch, return through centre, then repeat. Turn past 9 o'clock for one downward notch. A notch alternates fifth/octave movement exactly like Blueberry's buttons. |
 | Switch Middle | Free play: live keyboard voltage is quantised to C major pentatonic. |
 | Switch Down | Record while held. The captured loop lasts exactly as long as the hold. |
 | Switch Up | Play the recorded loop. |
 | Pulse In 1 | Clock. While patched in Up, each rising edge advances one recorded note event, following original Blueberry clock behaviour. Without a clock, playback uses the captured timing. |
 | CV Out 1 | Quantised pitch, using Workshop output calibration. |
-| Pulse Out 1 | Gate: high while a keyboard note or recorded event is active. |
+| Pulse Out 1 | Live Pulse In 2 gate, or the recorded gate during playback. |
 | Pulse Out 2 | Brief pulse at each loop restart. |
 
-Audio In 2, CV In 1/2, Audio Outs, and CV Out 2 are unused in this first pass.
+Audio In 1/2, CV In 2, Audio Outs, and CV Out 2 are unused.
+
+4 Voltages single-button selections latch. They can hold a pitch while a
+separate gate source articulates notes. In Up, live CV In 1 and Pulse In 2 do
+not override saved playback. Return Middle for live control. Recorded pitches
+include the Main transposition used during recording.
+
+## Workshop System Patch
+
+| From | To |
+| --- | --- |
+| 4 Voltages output | Computer CV In 1 |
+| Computer CV Out 1 | Top oscillator pitch input |
+| Top oscillator sine | Ring Mod upper input |
+| Computer Pulse Out 1 | Top Slopes input |
+| Top Slopes output | Ring Mod lower input |
+| Ring Mod output | Mix input |
+| Bottom Slopes output | Computer Pulse In 2 |
+
+Set top Slopes to Falling, Loop off, for an audible envelope. Set bottom
+Slopes to Loop/Falling for gates, or substitute an external gate source.
+Turn oscillator FM down. Pulse In 1 remains an independent playback clock.
 
 ## LEDs
 
 | LED | Meaning |
 | --- | --- |
-| 0 | Input calibration present. It blinks while measuring the startup baseline. |
+| 0 | Input calibration coefficients were loaded from EEPROM. |
 | 1 | Loop playback is active in Switch Up. |
 | 2 | Recording while Switch Down is held. |
 | 3 | Pulse In 1 is patched. |
@@ -43,9 +65,15 @@ Audio In 2, CV In 1/2, Audio Outs, and CV Out 2 are unused in this first pass.
 - The first pass stores up to 512 changes of pitch or gate. Steady held notes
   use one event regardless of their duration, so typical phrases can be long.
 - The scale is fixed to Blueberry's default major pentatonic for now.
+- Recorded timing has 1 ms resolution. Gate triggers sampled by the audio
+  runtime are retained for at least one control tick. Pulses shorter than
+  one 48 kHz audio sample may still be missed.
 - Input calibration is available in ComputerCard 0.4.0. When no calibration
   record is present, the card still works with the framework's approximate
   voltage conversion but LED 0 remains off.
+- CV inputs are less precise than audio inputs. A local `CVIn1Millivolts()`
+  accessor uses the framework's existing CV1 calibration coefficients.
+  Calibrated CV output remains enabled.
 
 ## Build
 
@@ -55,7 +83,21 @@ cmake -S cards/blueberry -B /private/tmp/workshop-blueberry -G "Unix Makefiles"
 cmake --build /private/tmp/workshop-blueberry -j2
 ```
 
-The build creates `workshop_blueberry.uf2`.
+The build creates `workshop_blueberry.uf2`. Flash
+[workshop_blueberry_0.2.0.uf2](uf2/workshop_blueberry_0.2.0.uf2) for testing.
+See [TEST_PROTOCOL.md](TEST_PROTOCOL.md).
+
+Native control tests replace hardware I/O while executing the card code:
+
+```sh
+c++ -std=c++17 -Wall -Wextra -Icards/blueberry/tests cards/blueberry/tests/control_test.cpp -o /tmp/blueberry-control-test
+/tmp/blueberry-control-test
+```
+
+The previous source and UF2 are preserved in [archive/0.1.0](archive/0.1.0/).
+Version 0.2.0 also corrects the first pass's pitch scaling to standard 1 V/oct
+and captures playback-clock edges at audio rate so they are not lost between
+control ticks. Workshop-specific changes were AI-assisted.
 
 ## Attribution And Licence
 

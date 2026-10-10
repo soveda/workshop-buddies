@@ -1,32 +1,36 @@
 draft: true
 Name: Workshop Blueberry
-short-description: First-pass Blueberry-inspired quantised 4 Voltages keyboard recorder.
+short-description: Blueberry-inspired quantised CV keyboard recorder with a separate gate input.
 summary: >-
-  A first-pass monophonic Workshop Computer control card inspired by Blueberry.
-  It turns one 4 Voltages output into a quantised keyboard, records held
-  phrases, and replays them freely or from Pulse In 1 clock.
+  An experimental monophonic Workshop Computer control card inspired by Blueberry.
+  CV In 1 supplies quantised pitch and Pulse In 2 supplies an independent gate.
+  It records phrases while Down is held and replays them freely or from Pulse In 1 clock.
 Language: C++ (Pico SDK / ComputerCard 0.4.0)
 Creator: Adrian Vos
-Version: "0.1.0"
+Version: "0.2.0"
 Status: Experimental
 License: MIT
 date-created: 2026-09-24
-date-updated: 2026-09-24
+date-updated: 2026-10-10
 repository: https://github.com/soveda/workshop-buddies
 contact:
   social:
     github: https://github.com/soveda
 tags:
   - sequencer
-  - quantizer
+  - quantiser
   - cv
   - performance
 panel:
   inputs:
-    - id: AudioIn1
+    - id: CVIn1
       name: 4 Voltages Keyboard
       type: cv
-      description: One output from 4 Voltages; learned as a resting voltage after reset and quantised to pitch.
+      description: Pitch CV from one 4 Voltages output, quantised to major pentatonic at 1 V/oct.
+    - id: PulseIn2
+      name: Gate In
+      type: pulse
+      description: Independent live and recorded gate from Slopes or an external gate/trigger source.
     - id: PulseIn1
       name: Clock
       type: pulse
@@ -64,7 +68,7 @@ controls:
       items:
         - id: LED0
           name: Input Calibration
-          description: Lit when calibrated Audio In conversion is available.
+          description: Lit when input calibration coefficients are loaded from EEPROM.
         - id: LED1
           name: Loop Playback
           description: Lit while a recorded loop is playing in Switch Up.
@@ -81,5 +85,5 @@ controls:
           name: Pitch
           description: Brightness represents current quantised pitch.
 uf2:
-  - path: uf2/workshop_blueberry_0.1.0.uf2
-    name: Workshop Blueberry 0.1.0 First Pass
+  - path: uf2/workshop_blueberry_0.2.0.uf2
+    name: Workshop Blueberry 0.2.0 CV Pitch and Separate Gate

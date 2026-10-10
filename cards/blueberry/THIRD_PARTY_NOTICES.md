@@ -8,6 +8,10 @@
 Copyright (c) 2024-2026 Chris Johnson. Distributed under the MIT License; see
 [`ComputerCard.h`](ComputerCard.h) for its complete licence notice.
 
+The local header adds `CVIn1Millivolts()`, using the framework's existing CV1
+EEPROM coefficients and conversion. This accessor is a Workshop Blueberry
+extension, not an unmodified upstream 0.4.0 API.
+
 ## Blueberry Inspiration
 
 This card is a new Workshop implementation inspired by the interaction model

@@ -380,6 +380,12 @@ protected:
 	/// Return true iff input calibration has been loaded from EEPROM.
 	bool InputsCalibrated() const { return inputsCalibrated; }
 
+	/// Workshop Blueberry extension: use the existing CV1 EEPROM coefficients.
+	int32_t __not_in_flash_func(CVIn1Millivolts)()
+	{
+		return SignedADCToMillivolts(cv[0], 2);
+	}
+
 	/// Return calibrated Audio In 1 in millivolts.
 	int32_t __not_in_flash_func(AudioIn1Millivolts)()
 	{
