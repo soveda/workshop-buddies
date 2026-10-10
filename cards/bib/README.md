@@ -66,3 +66,8 @@ A separate [1.1.1-beta clock test](experimental/clock-reacquisition/README.md)
 fixes reacquisition after large clock-rate changes, including quarter notes
 to sixteenths. It includes a test UF2 and hardware protocol. The 1.1.0-beta
 release above remains the fallback until the new version passes hardware tests.
+
+A second [1.1.2-beta clock stability test](experimental/clock-jitter-stability/README.md)
+adds sample-level edge timing, period smoothing and division hysteresis to
+address repeated pitch changes near clock division boundaries. Both test
+versions are preserved for comparison.
