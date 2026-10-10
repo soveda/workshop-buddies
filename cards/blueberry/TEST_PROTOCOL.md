@@ -1,8 +1,7 @@
-# Workshop Blueberry 0.2.0 Test Protocol
+# Workshop Blueberry 0.3.0 Test Protocol
 
-Result: all checks reported passing on the Workshop System on 2026-10-10.
-The tested firmware is `uf2/workshop_blueberry_0.2.0.uf2`; no firmware changes
-were made after this pass report.
+Status: record-toggle change awaiting hardware validation. The passing
+hold-to-record 0.2.0 source and UF2 are preserved in `archive/0.2.0`.
 
 ## Setup
 
@@ -12,6 +11,8 @@ were made after this pass report.
 3. Patch bottom Slopes output to **Pulse In 2**, with Loop/Falling selected,
    or use an external gate/trigger. Reset Computer with Switch Middle.
    No special 4 Voltages selection is needed.
+
+Flash `uf2/workshop_blueberry_0.3.0.uf2` for these tests.
 
 For Workshop-only audio, patch CV Out 1 to the top oscillator pitch input,
 its sine to Ring Mod upper input, and Pulse Out 1 to top Slopes input.
@@ -32,16 +33,22 @@ input, then Ring Mod output to Mix. Turn oscillator FM down.
 
 ## Recording And Free Loop Playback
 
-1. Hold Switch Down while selecting pitches and feeding gates into Pulse In 2,
-   then release. Leave Pulse In 1 unpatched for this test.
-2. LED 2 should be lit only during the held recording.
+1. Leave Pulse In 1 unpatched. Press Down once, then release to Middle.
+   LED 2 should come on and stay on. Play pitches and gates with both hands free.
+2. Press Down again to stop, then release. LED 2 should go off. Holding Down
+   for a second must only toggle once, not repeatedly start/stop recording.
 3. Move Switch Up. Expect the phrase to repeat with the same timing and
    pitch/gate pattern. Pulse Out 2 marks each loop restart.
 4. Return to Middle. Expect live free play again; the loop remains in RAM.
-5. In Up, change the live pitch and gate or unpatch Pulse In 2. The saved
+5. Start another take with Down, release and play, then select Up without a
+   second Down press. Recording should stop and playback begin: LED 2 off,
+   LED 1 on. This replaces the previous loop.
+6. In Up, change the live pitch and gate or unpatch Pulse In 2. The saved
    phrase should remain unchanged. In Middle those inputs should control
    the output again. Record once with Pulse In 2 unpatched: that loop should
    have no output gates.
+7. Reset with Down held. Recording must stay off until released and pressed
+   again. Reset with Middle should leave LED 2 off and normal live control.
 
 ## Clocked Playback
 

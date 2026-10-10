@@ -4,10 +4,10 @@ short-description: Blueberry-inspired quantised CV keyboard recorder with a sepa
 summary: >-
   An experimental monophonic Workshop Computer control card inspired by Blueberry.
   CV In 1 supplies quantised pitch and Pulse In 2 supplies an independent gate.
-  It records phrases while Down is held and replays them freely or from Pulse In 1 clock.
+  Down toggles recording, LED 2 shows an active take, and Up replays freely or from Pulse In 1 clock.
 Language: C++ (Pico SDK / ComputerCard 0.4.0)
 Creator: Adrian Vos
-Version: "0.2.0"
+Version: "0.3.0"
 Status: Experimental
 License: MIT
 date-created: 2026-09-24
@@ -52,13 +52,13 @@ controls:
   switch:
     up:
       name: Play Loop
-      description: Plays the captured phrase.
+      description: Finishes an active recording and plays the captured phrase.
     middle:
       name: Free Play
-      description: Plays the live 4 Voltages input.
+      description: Plays live CV pitch and gate; recording continues here until stopped.
     down:
-      name: Hold To Record
-      description: Records quantised pitch and gate events for the duration held.
+      name: Record Toggle
+      description: One Down press starts a new take; release, then press again to stop. Holding does not retrigger.
   knobs:
     - main:
         name: Transpose Notches
@@ -74,7 +74,7 @@ controls:
           description: Lit while a recorded loop is playing in Switch Up.
         - id: LED2
           name: Recording
-          description: Lit while Switch Down is held and a phrase is captured.
+          description: Stays lit while recording, including after the switch returns to Middle.
         - id: LED3
           name: Clock Patched
           description: Lit when Pulse In 1 is connected.
@@ -85,5 +85,5 @@ controls:
           name: Pitch
           description: Brightness represents current quantised pitch.
 uf2:
-  - path: uf2/workshop_blueberry_0.2.0.uf2
-    name: Workshop Blueberry 0.2.0 CV Pitch and Separate Gate
+  - path: uf2/workshop_blueberry_0.3.0.uf2
+    name: Workshop Blueberry 0.3.0 Record Toggle

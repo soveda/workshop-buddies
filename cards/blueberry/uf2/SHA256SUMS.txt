@@ -1,1 +1,1 @@
-bc36d8b81a2feaf0dc016999747093dc0145c9a4db93af046d9b46a7b8fc3593  workshop_blueberry_0.2.0.uf2
+5f45341abdfa73e810f91bcbc01b30be57081e5128f6e0b4974e6e10d7be6bcd  workshop_blueberry_0.3.0.uf2

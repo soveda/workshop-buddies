@@ -1,4 +1,4 @@
-// Workshop Blueberry 0.2.0, CV keyboard and explicit gate recorder.
+// Workshop Blueberry 0.3.0, CV keyboard with toggle recording.
 //
 // CV In 1 receives one output from the Workshop System's 4 Voltages
 // module. Its changing analogue value is treated as a small keyboard, then
@@ -68,6 +68,10 @@ private:
     bool gateHighSeen_ = false;
     bool recording_ = false;
     bool hadLoop_ = false;
+    Switch stableSwitch_ = Switch::Middle;
+    Switch candidateSwitch_ = Switch::Middle;
+    uint8_t switchTicks_ = 0;
+    bool recordArmed_ = false;
     Switch previousSwitch_ = Switch::Middle;
     uint8_t loopPulseTicks_ = 0;
 
@@ -169,7 +173,42 @@ private:
         eventCount_ = 0;
         hadLoop_ = false;
         recording_ = true;
+        loopPulseTicks_ = 0;
         AppendEvent(state);
+    }
+
+    void StopRecording()
+    {
+        recording_ = false;
+        hadLoop_ = eventCount_ != 0;
+        StartPlayback();
+    }
+
+    bool RecordPressed(Switch requested)
+    {
+        if (requested != candidateSwitch_)
+        {
+            candidateSwitch_ = requested;
+            switchTicks_ = 1;
+        }
+        else if (switchTicks_ < 10)
+        {
+            ++switchTicks_;
+        }
+        if (switchTicks_ < 10) return false;
+
+        const bool changed = stableSwitch_ != candidateSwitch_;
+        stableSwitch_ = candidateSwitch_;
+        if (stableSwitch_ != Switch::Down)
+        {
+            recordArmed_ = true;
+            return false;
+        }
+        // Require a settled release between presses. Booting with Down held
+        // must not accidentally erase the loop or begin a recording.
+        if (!changed || !recordArmed_) return false;
+        recordArmed_ = false;
+        return true;
     }
 
     void Capture(NoteState state)
@@ -246,7 +285,7 @@ private:
         LedOn(0, InputsCalibrated());
         LedOn(2, recording_);
         LedOn(4, state.gate);
-        LedOn(1, mode == Switch::Up && hadLoop_);
+        LedOn(1, mode == Switch::Up && hadLoop_ && !recording_);
         LedOn(3, Connected(Input::Pulse1));
         LedBrightness(5, static_cast<uint16_t>(Clamp(state.pitchMv + 6000, 0, 12000) >> 2));
     }
@@ -255,18 +294,24 @@ private:
     {
         UpdateTranspose(KnobVal(Knob::Main));
         const NoteState live = LiveNote();
-        const Switch mode = SwitchVal();
+        const bool recordPressed = RecordPressed(SwitchVal());
+        const Switch mode = stableSwitch_;
+        bool startedRecording = false;
 
-        if (mode == Switch::Down)
+        if (recordPressed)
         {
-            if (!recording_) BeginRecording(live);
-            Capture(live);
+            if (recording_) StopRecording();
+            else
+            {
+                BeginRecording(live);
+                startedRecording = true;
+            }
         }
-        else if (recording_)
+        // Up is always playback: finish an active take before playing it.
+        if (recording_ && mode == Switch::Up) StopRecording();
+        if (recording_ && !startedRecording)
         {
-            recording_ = false;
-            hadLoop_ = eventCount_ != 0;
-            StartPlayback();
+            Capture(live);
         }
 
         if (mode == Switch::Up && previousSwitch_ != Switch::Up)

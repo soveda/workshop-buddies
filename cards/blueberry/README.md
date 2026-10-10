@@ -1,7 +1,7 @@
 # Workshop Blueberry
 
-**Version 0.2.0 experimental firmware. Hardware-tested on the Workshop System;
-all protocol checks reported passing on 2026-10-10.** Workshop Blueberry is a Blueberry-inspired,
+**Version 0.3.0 experimental firmware. Record-toggle change awaiting hardware
+validation.** Workshop Blueberry is a Blueberry-inspired,
 monophonic quantised keyboard recorder for the Workshop Computer. Patch one
 output from the Workshop System's **4 Voltages** module to CV In 1. The card
 quantises its voltage to pitch. Pulse In 2 supplies an independent gate from
@@ -19,8 +19,8 @@ not a direct firmware port.
 | Pulse In 2 | Explicit live gate. Pitch changes do not create gates; no gate cable means gate off. |
 | Main | Blueberry-style persistent transposition. Turn past 3 o'clock for one upward notch, return through centre, then repeat. Turn past 9 o'clock for one downward notch. A notch alternates fifth/octave movement exactly like Blueberry's buttons. |
 | Switch Middle | Free play: live keyboard voltage is quantised to C major pentatonic. |
-| Switch Down | Record while held. The captured loop lasts exactly as long as the hold. |
-| Switch Up | Play the recorded loop. |
+| Switch Down | Record toggle: press once to start a new take, release to Middle and play, then press again to stop. |
+| Switch Up | Play the recorded loop. If recording, finish the take and start playback. |
 | Pulse In 1 | Clock. While patched in Up, each rising edge advances one recorded note event, following original Blueberry clock behaviour. Without a clock, playback uses the captured timing. |
 | CV Out 1 | Quantised pitch, using Workshop output calibration. |
 | Pulse Out 1 | Live Pulse In 2 gate, or the recorded gate during playback. |
@@ -55,7 +55,7 @@ Turn oscillator FM down. Pulse In 1 remains an independent playback clock.
 | --- | --- |
 | 0 | Input calibration coefficients were loaded from EEPROM. |
 | 1 | Loop playback is active in Switch Up. |
-| 2 | Recording while Switch Down is held. |
+| 2 | Recording in progress; stays lit after Down is released until recording stops. |
 | 3 | Pulse In 1 is patched. |
 | 4 | Gate is high. |
 | 5 | Current quantised pitch brightness. |
@@ -85,7 +85,7 @@ cmake --build /private/tmp/workshop-blueberry -j2
 ```
 
 The build creates `workshop_blueberry.uf2`. Flash
-[workshop_blueberry_0.2.0.uf2](uf2/workshop_blueberry_0.2.0.uf2) for testing.
+[workshop_blueberry_0.3.0.uf2](uf2/workshop_blueberry_0.3.0.uf2) for testing.
 See [TEST_PROTOCOL.md](TEST_PROTOCOL.md).
 
 Native control tests replace hardware I/O while executing the card code:
@@ -95,7 +95,12 @@ c++ -std=c++17 -Wall -Wextra -Icards/blueberry/tests cards/blueberry/tests/contr
 /tmp/blueberry-control-test
 ```
 
-The previous source and UF2 are preserved in [archive/0.1.0](archive/0.1.0/).
+The passing 0.2.0 hold-to-record source and UF2 are preserved in
+[archive/0.2.0](archive/0.2.0/). The first pass is in [archive/0.1.0](archive/0.1.0/).
+Version 0.3.0 debounces Down presses for 10 ms and requires a settled release
+between toggles. Holding Down only toggles once. Booting with Down held does
+not start recording; release it before the first press. Starting a new take
+replaces the old loop; stopping leaves it saved in RAM while Middle stays live.
 Version 0.2.0 also corrects the first pass's pitch scaling to standard 1 V/oct
 and captures playback-clock edges at audio rate so they are not lost between
 control ticks. Workshop-specific changes were AI-assisted.

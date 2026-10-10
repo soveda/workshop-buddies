@@ -13,6 +13,7 @@ public:
     enum class Switch { Middle, Down, Up };
     bool connected[3] = {true, false, false};
     bool gate = false, edge = false, gateOut = false, loopOut = false;
+    bool leds[6] = {};
     int32_t pitch = 1000, pitchOut = 0, mainKnob = 2048;
     Switch mode = Switch::Middle;
     virtual void ProcessSample() {}
@@ -30,7 +31,7 @@ public:
     void PulseOut1(bool high) { gateOut = high; }
     void PulseOut2(bool high) { loopOut = high; }
     bool InputsCalibrated() { return true; }
-    void LedOn(int, bool) {}
+    void LedOn(int i, bool value) { leds[i] = value; }
     void LedBrightness(int, uint16_t) {}
     void Run() {}
 };
@@ -55,7 +56,7 @@ void Tick(WorkshopBlueberry &card, int shortGateSample = -1, int clockSample = -
 int main()
 {
     WorkshopBlueberry card;
-    Tick(card);
+    for (int i = 0; i < 10; ++i) Tick(card);
     assert(card.pitchOut == 1000 && !card.gateOut);
     card.pitch = 2000;
     Tick(card);
@@ -75,16 +76,28 @@ int main()
     card.pitch = 1000;
     card.connected[2] = true;
     card.mode = ComputerCard::Switch::Down;
-    Tick(card);
+    for (int i = 0; i < 30; ++i) Tick(card);
+    assert(card.leds[2]);
     card.gate = false;
     Tick(card);
     card.mode = ComputerCard::Switch::Middle;
-    Tick(card);
+    for (int i = 0; i < 20; ++i) Tick(card);
+    assert(card.leds[2]); // Recording continues with both hands free.
+    card.mode = ComputerCard::Switch::Down;
+    for (int i = 0; i < 5; ++i) Tick(card);
+    card.mode = ComputerCard::Switch::Middle;
+    for (int i = 0; i < 10; ++i) Tick(card);
+    assert(card.leds[2]); // Brief switch bounce must not stop recording.
+    card.mode = ComputerCard::Switch::Down;
+    for (int i = 0; i < 20; ++i) Tick(card);
+    assert(!card.leds[2]);
+    card.mode = ComputerCard::Switch::Middle;
+    for (int i = 0; i < 10; ++i) Tick(card);
     card.connected[1] = true;
     card.connected[2] = false;
     card.pitch = 3000;
     card.mode = ComputerCard::Switch::Up;
-    Tick(card);
+    for (int i = 0; i < 10; ++i) Tick(card);
     assert(card.pitchOut == 1000 && card.gateOut); // Recorded state, not live.
     Tick(card, -1, 7);
     assert(!card.gateOut); // Captured clock edge advanced to gate-off event.
@@ -93,7 +106,7 @@ int main()
     Tick(card, -1, 2);
     assert(card.gateOut && card.loopOut);
     card.mode = ComputerCard::Switch::Middle;
-    Tick(card);
+    for (int i = 0; i < 10; ++i) Tick(card);
     assert(card.pitchOut == 3000 && !card.gateOut);
 
     card.pitch = 1000;
@@ -107,5 +120,17 @@ int main()
     card.mainKnob = 3500;
     Tick(card);
     assert(card.pitchOut == 2000);
-    std::puts("Passed: independent CV/gate, short triggers, recorded gates, clock edges, live return and 1 V/oct transposition.");
+    WorkshopBlueberry startup;
+    startup.mode = ComputerCard::Switch::Down;
+    for (int i = 0; i < 100; ++i) Tick(startup);
+    assert(!startup.leds[2]);
+    startup.mode = ComputerCard::Switch::Middle;
+    for (int i = 0; i < 10; ++i) Tick(startup);
+    startup.mode = ComputerCard::Switch::Down;
+    for (int i = 0; i < 10; ++i) Tick(startup);
+    assert(startup.leds[2]);
+    startup.mode = ComputerCard::Switch::Up;
+    for (int i = 0; i < 10; ++i) Tick(startup);
+    assert(!startup.leds[2] && startup.leds[1]);
+    std::puts("Passed: record toggle, hold/bounce/startup guards, LED state, Up stops recording, CV/gates, clock and transpose.");
 }
