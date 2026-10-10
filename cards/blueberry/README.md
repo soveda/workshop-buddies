@@ -18,7 +18,7 @@ not a direct firmware port.
 | CV In 1 | Pitch voltage from one 4 Voltages output, quantised to C major pentatonic at 1 V/oct. |
 | Pulse In 2 | Explicit live gate. Pitch changes do not create gates; no gate cable means gate off. |
 | Main | Blueberry-style persistent transposition. Turn past 3 o'clock for one upward notch, return through centre, then repeat. Turn past 9 o'clock for one downward notch. A notch alternates fifth/octave movement exactly like Blueberry's buttons. |
-| Switch Middle | Free play: live keyboard voltage is quantised to C major pentatonic. |
+| Switch Middle | Free play: live keyboard voltage is quantised to C major pentatonic. An active recording continues after releasing Down. |
 | Switch Down | Record toggle: press once to start a new take, release to Middle and play, then press again to stop. |
 | Switch Up | Play the recorded loop. If recording, finish the take and start playback. |
 | Pulse In 1 | Clock. While patched in Up, each rising edge advances one recorded note event, following original Blueberry clock behaviour. Without a clock, playback uses the captured timing. |
@@ -90,6 +90,10 @@ cmake --build /private/tmp/workshop-blueberry -j2
 The build creates `workshop_blueberry.uf2`. Flash
 [workshop_blueberry_0.3.0.uf2](uf2/workshop_blueberry_0.3.0.uf2) for testing.
 See [TEST_PROTOCOL.md](TEST_PROTOCOL.md).
+
+The 0.3.0 protocol passed on Workshop hardware on 2026-10-10, including toggle
+recording, the recording LED, live control, saved playback, and clock/gate inputs.
+This is the current tested experimental version.
 
 Native control tests replace hardware I/O while executing the card code:
 
