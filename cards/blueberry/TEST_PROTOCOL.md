@@ -10,7 +10,8 @@ hold-to-record 0.2.0 source and UF2 are preserved in `archive/0.2.0`.
    or an envelope generator.
 3. Patch bottom Slopes output to **Pulse In 2**, with Loop/Falling selected,
    or use an external gate/trigger. Reset Computer with Switch Middle.
-   No special 4 Voltages selection is needed.
+   No special 4 Voltages selection, resting-voltage learning, or user
+   calibration procedure is needed.
 
 Flash `uf2/workshop_blueberry_0.3.0.uf2` for these tests.
 
@@ -61,13 +62,12 @@ input, then Ring Mod output to Mix. Turn oscillator FM down.
 4. Captured events include gate-off states, so not every clock edge will sound
    a note. Try different clock rates and confirm most edges are not missed.
 
-## Calibration Indicator
+## LED 0 And Stability
 
-1. After startup, LED 0 on means input calibration coefficients were found in
-   EEPROM. Off means the card is using ComputerCard's approximate conversion.
-2. Both states should remain playable; calibrated input is expected to give
-   more repeatable pitch placement between Workshop Computers. CV inputs are
-   less precise than Audio inputs; check stable pitch at fixed voltages.
+1. LED 0 reports whether existing factory/input calibration coefficients were
+   loaded from EEPROM. It is informational only: there is nothing to learn
+   or calibrate for this test, and either LED state should remain playable.
+2. Check that a fixed CV In 1 voltage produces a stable quantised pitch.
 3. Leave a loop running for 15 minutes, then check recording and free play.
    Reset clears the loop. Timing is recorded at 1 ms resolution; sampled
    short gate triggers are retained for at least one tick.
